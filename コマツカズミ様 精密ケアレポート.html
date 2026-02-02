@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light" style=""><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CREDO精密ケア解析レポート_コマツカズミ様</title>
+    <!-- Google Fonts: Hiragino alternative for broader compatibility -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap" rel="stylesheet">
+
+    <style>
+      :root {
+        /* カラーパレット */
+        --orange: #ef821d;
+        --yellow-orange: #f7b52c;
+        --red: #e95513;
+        --magenta: #bf2650;
+        --dark-magenta: #b71253;
+        --purple: #5f2c70;
+        --dark-purple: #8a385c;
+        --green: #2f765b;
+        --blue: #365393;
+        --coral: #e9565e;
+        --rose: #c0384d;
+        --dark-text: #2d2d2d;
+        --light-gray: #f5f5f5;
+        --med-gray: #e0e0e0;
+        --white: #ffffff;
+      }
+
+      /* 基本設定 */
+      body {
+        font-family:
+          'Hiragino Kaku Gothic ProN', 'Hiragino Kaku Gothic Pro', 'Hiragino Sans', 'Yu Gothic', 'Meiryo',
+          'Noto Sans JP', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        line-height: 1.8;
+        color: var(--dark-text);
+        margin: 0;
+        padding: 0;
+        background-color: #fafafa;
+        overflow-x: hidden;
+        width: 100%;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: var(--white);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        min-height: 100vh;
+      }
+
+      /* ヘッダー */
+      .header {
+        background: var(--white);
+        padding: 40px 50px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid transparent;
+        border-image: linear-gradient(to right, var(--purple), var(--magenta), var(--orange)) 1;
+      }
+
+      .logo-img {
+        max-width: 200px;
+        height: auto;
+      }
+
+      .header-content {
+        text-align: right;
+      }
+
+      .report-title {
+        font-size: 2em;
+        font-weight: bold;
+        margin: 0;
+        background: linear-gradient(135deg, var(--purple), var(--magenta), var(--orange));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1.2;
+      }
+
+      .patient-info {
+        color: #666;
+        margin-top: 5px;
+        font-size: 1.1em;
+      }
+
+      /* セクション共通 */
+      .section {
+        padding: 40px 50px;
+        border-bottom: 1px solid var(--light-gray);
+      }
+
+      .section-title {
+        font-size: 1.8em;
+        color: var(--dark-text);
+        margin-bottom: 30px;
+        position: relative;
+        padding-left: 20px;
+      }
+
+      .section-title::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        background: linear-gradient(to bottom, var(--purple), var(--orange));
+        border-radius: 3px;
+      }
+
+      .section-subtitle {
+        font-size: 1.4em;
+        color: var(--dark-purple);
+        margin: 25px 0 15px;
+        border-bottom: 2px solid var(--med-gray);
+        padding-bottom: 5px;
+      }
+
+      p {
+        margin-bottom: 1.5em;
+        text-align: justify;
+      }
+
+      /* ハイライトボックス */
+      .highlight-box {
+        background: linear-gradient(to right, rgba(95, 44, 112, 0.05), rgba(239, 130, 29, 0.05));
+        border-left: 5px solid var(--purple);
+        padding: 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 20px 0;
+      }
+
+      /* 総合スコアビジュアライゼーション */
+      .score-container {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 40px;
+        margin: 30px 0;
+        animation: fadeInUp 0.8s ease-out;
+      }
+
+      .score-svg-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .category-scores {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 15px;
+      }
+
+      .category-item {
+        display: grid;
+        grid-template-columns: 150px 1fr 60px;
+        align-items: center;
+        gap: 15px;
+        animation: slideIn 0.5s ease-out backwards;
+      }
+
+      .category-label {
+        font-weight: bold;
+        color: var(--dark-text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .progress-bar {
+        height: 16px;
+        background: var(--med-gray);
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .progress-fill {
+        height: 100%;
+        border-radius: 8px;
+        width: 0;
+        animation: fillBar 1.5s ease-out forwards;
+        position: relative;
+      }
+
+      .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.4) 50%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        transform: translateX(-100%);
+        animation: shimmer 2s infinite;
+      }
+
+      .category-score {
+        font-weight: bold;
+        text-align: right;
+        font-size: 1.2em;
+      }
+
+      /* 血液検査テーブル */
+      .table-wrapper {
+        overflow-x: auto;
+        margin: 20px 0;
+      }
+
+      .score-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95em;
+      }
+
+      .score-table th,
+      .score-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--med-gray);
+        text-align: left;
+      }
+
+      .score-table th {
+        background: linear-gradient(135deg, var(--purple), var(--dark-magenta));
+        color: white;
+        font-weight: normal;
+      }
+
+      .score-table tr:nth-child(even) {
+        background-color: var(--light-gray);
+      }
+
+      .value-bad {
+        color: var(--rose);
+        font-weight: bold;
+      }
+
+      .value-warn {
+        color: var(--orange);
+        font-weight: bold;
+      }
+
+      .value-good {
+        color: var(--green);
+        font-weight: bold;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        color: white;
+        font-size: 0.85em;
+        font-weight: bold;
+      }
+
+      .bg-bad {
+        background: var(--coral);
+      }
+      .bg-warn {
+        background: var(--yellow-orange);
+      }
+      .bg-good {
+        background: var(--green);
+      }
+
+      /* 遺伝子ボックス */
+      .gene-box {
+        background: #f8f9fa;
+        border-top: 3px solid var(--purple);
+        padding: 25px;
+        margin: 20px 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .gene-title {
+        color: var(--purple);
+        font-size: 1.3em;
+        font-weight: bold;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* 課題カード */
+      .issues-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .issue-card {
+        background: white;
+        border: 1px solid var(--med-gray);
+        border-radius: 8px;
+        padding: 20px;
+        transition: transform 0.3s;
+      }
+
+      .issue-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .issue-header {
+        color: var(--dark-magenta);
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-bottom: 10px;
+        border-bottom: 1px dashed var(--med-gray);
+        padding-bottom: 8px;
+      }
+
+      /* 優先度カード */
+      .priority-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .priority-card {
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        animation: cardPop 0.6s ease-out backwards;
+      }
+
+      .p-high {
+        background: linear-gradient(135deg, var(--coral), var(--rose));
+      }
+      .p-med {
+        background: linear-gradient(135deg, var(--orange), var(--yellow-orange));
+      }
+      .p-low {
+        background: linear-gradient(135deg, var(--green), #4a9d7d);
+      }
+
+      .priority-level {
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.9;
+        margin-bottom: 5px;
+      }
+
+      .priority-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      .priority-list {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .priority-list li {
+        margin-bottom: 8px;
+      }
+
+      /* チェックリスト */
+      .checklist-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .checklist-item {
+        display: flex;
+        align-items: start;
+        gap: 15px;
+        background: var(--light-gray);
+        padding: 15px;
+        border-radius: 8px;
+      }
+
+      .checkbox {
+        min-width: 24px;
+        height: 24px;
+        border: 2px solid var(--purple);
+        border-radius: 4px;
+        margin-top: 2px;
+        position: relative;
+      }
+
+      .checkbox::after {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: var(--purple);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0.2;
+      }
+
+      /* フッター */
+      .footer {
+        background: var(--white);
+        padding: 40px 50px;
+        text-align: center;
+        border-top: 3px solid transparent;
+        border-image: linear-gradient(to right, var(--orange), var(--magenta), var(--purple)) 1;
+      }
+
+      .copyright {
+        color: #999;
+        font-size: 0.9em;
+        margin-top: 20px;
+      }
+
+      /* アニメーション定義 */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes fillBar {
+        from {
+          width: 0;
+        }
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      @keyframes cardPop {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes drawCircle {
+        from {
+          stroke-dashoffset: 565.48;
+        }
+        to {
+          stroke-dashoffset: 237.5;
+        } /* 58% (100-58=42% offset) */
+      }
+
+      /* 遅延設定 */
+      .category-item:nth-child(1) {
+        animation-delay: 0.1s;
+      }
+      .category-item:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .category-item:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      .category-item:nth-child(4) {
+        animation-delay: 0.4s;
+      }
+
+      .priority-card:nth-child(1) {
+        animation-delay: 0.2s;
+      }
+      .priority-card:nth-child(2) {
+        animation-delay: 0.4s;
+      }
+      .priority-card:nth-child(3) {
+        animation-delay: 0.6s;
+      }
+
+      /* レスポンシブ対応 */
+      @media (max-width: 768px) {
+        .header {
+          flex-direction: column;
+          text-align: center;
+          padding: 25px 20px;
+        }
+
+        .header-content {
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .section {
+          padding: 30px 20px;
+        }
+
+        .score-container {
+          grid-template-columns: 1fr;
+          gap: 30px;
+        }
+
+        .issues-grid,
+        .priority-cards,
+        .checklist-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .category-item {
+          grid-template-columns: 1fr;
+          gap: 5px;
+          background: var(--light-gray);
+          padding: 10px;
+          border-radius: 8px;
+        }
+
+        .category-label {
+          justify-content: space-between;
+        }
+
+        .category-score {
+          text-align: right;
+        }
+
+        .score-svg-container svg {
+          width: 220px;
+          height: 220px;
+        }
+      }
+
+      /* 印刷用スタイル */
+      @media print {
+        body {
+          background: white !important;
+          padding: 0 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .container {
+          box-shadow: none !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+        }
+        @page {
+          margin: 1.5cm;
+          size: A4;
+        }
+        .section,
+        .priority-card,
+        .issue-card,
+        .gene-box,
+        .score-container {
+          page-break-inside: avoid;
+          box-shadow: none !important;
+        }
+        .header::after {
+          display: none;
+        }
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+        .progress-fill {
+          width: auto !important;
+        }
+        .score-svg-container circle {
+          stroke-dashoffset: 237.5 !important;
+        }
+      }
+    </style>
+  </head>
+  <body style="">
+    <div class="container">
+      <!-- 1. ヘッダー -->
+      <header class="header">
+        <div class="logo-container">
+          <img src="https://credo.iwate.jp/CREDO_logo.png" alt="CREDO Logo" class="logo-img" data-height-listener-added="true">
+        </div>
+        <div class="header-content">
+          <h1 class="report-title">CREDO精密ケア解析レポート</h1>
+          <div class="patient-info"><span>コマツカズミ 様</span> | <span>2026年2月</span></div>
+        </div>
+      </header>
+
+      <!-- 2. はじめに -->
+      <div class="section">
+        <h2 class="section-title">はじめに</h2>
+        <p>
+          本レポートは、遺伝子検査、血液検査、およびミネラル分析の結果を統合し、分子レベルでお客様の健康状態を紐解いたものです。
+        </p>
+        <p>
+          コマツ様の体質や現在の状態に合わせ、最も効率よく本来の活力を取り戻すための「精密な道筋」をご提案いたします。表面的な症状への対処だけでなく、根本原因（ルートコーズ）にアプローチすることで、輝く毎日を取り戻す一助となれば幸いです。
+        </p>
+      </div>
+
+      <!-- 3. 総合的な健康状態の評価 -->
+      <div class="section">
+        <h2 class="section-title">総合的な健康状態の評価</h2>
+        <div class="score-container">
+          <!-- 円形ゲージ -->
+          <div class="score-svg-container">
+            <svg width="280" height="280" viewBox="0 0 280 280">
+              <defs>
+                <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color: #ef821d; stop-opacity: 1"></stop>
+                  <stop offset="50%" style="stop-color: #bf2650; stop-opacity: 1"></stop>
+                  <stop offset="100%" style="stop-color: #5f2c70; stop-opacity: 1"></stop>
+                </linearGradient>
+              </defs>
+              <!-- 背景円 -->
+              <circle cx="140" cy="140" r="90" fill="none" stroke="#E0E0E0" stroke-width="20"></circle>
+              <!-- スコア円 -->
+              <circle cx="140" cy="140" r="90" fill="none" stroke="url(#scoreGradient)" stroke-width="20" stroke-linecap="round" stroke-dasharray="565.48" stroke-dashoffset="237.5" transform="rotate(-90 140 140)" style="animation: drawCircle 2s ease-out forwards"></circle>
+              <!-- テキスト -->
+              <text x="140" y="125" text-anchor="middle" font-size="48" font-weight="bold" fill="#5F2C70" font-family="sans-serif">
+                58
+              </text>
+              <text x="140" y="155" text-anchor="middle" font-size="24" fill="#666" font-family="sans-serif">
+                /100点
+              </text>
+              <text x="140" y="185" text-anchor="middle" font-size="16" fill="#999" font-family="sans-serif">
+                総合スコア
+              </text>
+            </svg>
+          </div>
+
+          <!-- カテゴリー別プログレスバー -->
+          <div class="category-scores">
+            <!-- 肝機能 -->
+            <div class="category-item">
+              <div class="category-label"><span style="color: var(--coral)">🔴</span> 肝機能</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 45%; background: linear-gradient(90deg, var(--coral), var(--rose))"></div>
+              </div>
+              <div class="category-score" style="color: var(--coral)">45</div>
+            </div>
+            <!-- メチル化回路 -->
+            <div class="category-item">
+              <div class="category-label"><span style="color: var(--orange)">🟠</span> メチル化回路</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 55%; background: linear-gradient(90deg, var(--orange), var(--yellow-orange))"></div>
+              </div>
+              <div class="category-score" style="color: var(--orange)">55</div>
+            </div>
+            <!-- 消化吸収力 -->
+            <div class="category-item">
+              <div class="category-label"><span style="color: var(--purple)">🟣</span> 消化吸収力</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 62%; background: linear-gradient(90deg, var(--purple), var(--magenta))"></div>
+              </div>
+              <div class="category-score" style="color: var(--purple)">62</div>
+            </div>
+            <!-- 血糖コントロール -->
+            <div class="category-item">
+              <div class="category-label"><span style="color: var(--green)">🟢</span> 血糖</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 70%; background: linear-gradient(90deg, var(--green), #4a9d7d)"></div>
+              </div>
+              <div class="category-score" style="color: var(--green)">70</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <strong>【分析サマリー】</strong><br>
+          遺伝的なメチル化回路の停滞（MTHFR変異）を背景に、脂質代謝の異常と慢性的な炎症が見られます。特にコレステロール値の上昇と甲状腺機能の低下はリンクしており、栄養アプローチによる優先的な介入が必要です。
+        </div>
+      </div>
+
+      <!-- 4. 血液検査の分析 -->
+      <div class="section">
+        <h2 class="section-title">血液検査の分析</h2>
+        <p>現状の課題を示す主要なマーカーの分析結果です。</p>
+
+        <div class="table-wrapper">
+          <table class="score-table">
+            <thead>
+              <tr>
+                <th>検査項目</th>
+                <th>結果</th>
+                <th>基準値（理想）</th>
+                <th>評価</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>総コレステロール</td>
+                <td class="value-bad">318 mg/dL</td>
+                <td>180-220</td>
+                <td><span class="status-badge bg-bad">高値</span></td>
+              </tr>
+              <tr>
+                <td>LDLコレステロール</td>
+                <td class="value-bad">218 mg/dL</td>
+                <td>80-120</td>
+                <td><span class="status-badge bg-bad">高値</span></td>
+              </tr>
+              <tr>
+                <td>TSH (甲状腺刺激)</td>
+                <td class="value-warn">0.295 μIU/mL</td>
+                <td>0.5-2.0</td>
+                <td><span class="status-badge bg-warn">低値</span></td>
+              </tr>
+              <tr>
+                <td>FT3 (遊離甲状腺)</td>
+                <td class="value-warn">2.77 pg/mL</td>
+                <td>3.0-4.1</td>
+                <td><span class="status-badge bg-warn">低値</span></td>
+              </tr>
+              <tr>
+                <td>フェリチン (貯蔵鉄)</td>
+                <td class="value-bad">205 ng/mL</td>
+                <td>50-80</td>
+                <td><span class="status-badge bg-bad">高値</span></td>
+              </tr>
+              <tr>
+                <td>コルチゾール (朝)</td>
+                <td class="value-bad">7.5 μg/dL</td>
+                <td>4-6</td>
+                <td><span class="status-badge bg-bad">高値</span></td>
+              </tr>
+              <tr>
+                <td>CK (CPK)</td>
+                <td class="value-bad">184 U/L</td>
+                <td>80-100</td>
+                <td><span class="status-badge bg-bad">高値</span></td>
+              </tr>
+              <tr>
+                <td>LDH</td>
+                <td class="value-warn">136 U/L</td>
+                <td>180-200</td>
+                <td><span class="status-badge bg-warn">低値</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size: 0.9em; color: #666; margin-top: 10px">
+          ※「高値」「低値」は、機能性医学に基づく理想値との比較です。
+        </p>
+      </div>
+
+      <!-- 5. 遺伝的背景 -->
+      <div class="section">
+        <h2 class="section-title">遺伝的背景</h2>
+        <div class="gene-box">
+          <div class="gene-title">🧬 MTHFR (C677T) : +/+ (ホモ接合体)</div>
+          <p>
+            最も重要な遺伝的特徴として、葉酸を活性型に変換する酵素（MTHFR）の働きが通常の約10-30%程度に低下しているタイプです。
+          </p>
+          <p>
+            <strong>影響と対策：</strong><br>
+            この体質の方は、通常の葉酸サプリメントを摂取しても効率よく利用できず、かえって未代謝物が蓄積する可能性があります。また、メチル化回路の停滞により、解毒能力の低下や神経伝達物質（セロトニン等）の合成不足、ホモシステインの蓄積が起きやすくなります。<br>
+            <br>
+            ✨
+            <strong>対策：</strong>
+            「活性型葉酸（5-MTHF）」と「活性型ビタミンB12（メチルコバラミン）」の摂取が極めて有効です。
+          </p>
+        </div>
+      </div>
+
+      <!-- 6. 現状の課題 -->
+      <div class="section">
+        <h2 class="section-title">現状の課題</h2>
+        <div class="issues-grid">
+          <div class="issue-card">
+            <div class="issue-header">1. 脂質代謝異常</div>
+            <div>
+              LDLコレステロールが218と非常に高く、酸化ストレスも伴っているため、動脈硬化リスクへの対策が最優先です。
+            </div>
+          </div>
+          <div class="issue-card">
+            <div class="issue-header">2. 甲状腺機能低下（潜在性）</div>
+            <div>
+              TSHとFT3の低値は、代謝の司令塔である甲状腺が省エネモードになっていることを示唆し、脂質代謝悪化の一因です。
+            </div>
+          </div>
+          <div class="issue-card">
+            <div class="issue-header">3. 慢性炎症（機能性鉄欠乏）</div>
+            <div>フェリチン205は炎症による偽の高値であり、実際は鉄が細胞で使えていない「機能性鉄欠乏」の状態です。</div>
+          </div>
+          <div class="issue-card">
+            <div class="issue-header">4. ストレス過多（高コルチゾール）</div>
+            <div>交感神経優位の状態が続き、副腎疲労のリスクがあります。これが甲状腺機能を抑制しています。</div>
+          </div>
+          <div class="issue-card">
+            <div class="issue-header">5. ミトコンドリア機能不全</div>
+            <div>
+              CK高値(184)とLDH低値(136)は、エネルギー産生工場の機能低下と、筋肉などの細胞ダメージを示唆しています。
+            </div>
+          </div>
+          <div class="issue-card">
+            <div class="issue-header">6. ミネラルアンバランス</div>
+            <div>
+              亜鉛不足と銅過剰が見られ、これが炎症を助長しています。マグネシウムの枯渇もエネルギー不足の原因です。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. 改善プラン（食事・栄養素） -->
+      <div class="section">
+        <h2 class="section-title">改善プラン（食事・栄養素）</h2>
+        <p>遺伝的弱点をカバーし、代謝を正常化するための優先順位別プランです。</p>
+
+        <div class="priority-cards">
+          <!-- Priority 1 -->
+          <div class="priority-card p-high">
+            <div class="priority-level">PRIORITY 1</div>
+            <div class="priority-title">メチル化回路の再起動</div>
+            <ul class="priority-list">
+              <li><strong>活性型葉酸 (5-MTHF)</strong><br>遺伝子変異に対応する必須栄養素。</li>
+              <li><strong>活性型ビタミンB12</strong><br>葉酸とセットで神経系をサポート。</li>
+              <li><strong>ビタミンB6 (P-5-P)</strong><br>ホモシステインの無毒化に必須。</li>
+            </ul>
+          </div>
+
+          <!-- Priority 2 -->
+          <div class="priority-card p-med">
+            <div class="priority-level">PRIORITY 2</div>
+            <div class="priority-title">炎症抑制とエネルギー産生</div>
+            <ul class="priority-list">
+              <li><strong>マグネシウム</strong><br>ミトコンドリア活性化とリラックス。</li>
+              <li><strong>亜鉛</strong><br>銅過剰の補正と抗炎症作用。</li>
+              <li><strong>オメガ3 (EPA/DHA)</strong><br>細胞膜の修復と炎症抑制。</li>
+            </ul>
+          </div>
+
+          <!-- Priority 3 -->
+          <div class="priority-card p-low">
+            <div class="priority-level">PRIORITY 3</div>
+            <div class="priority-title">甲状腺と抗酸化</div>
+            <ul class="priority-list">
+              <li><strong>セレン</strong><br>甲状腺ホルモン(T3)への変換を助ける。</li>
+              <li><strong>タンパク質</strong><br>ホルモンや酵素の材料として。</li>
+              <li><strong>ビタミンC</strong><br>副腎サポートと抗酸化。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. 改善プラン（生活習慣） -->
+      <div class="section">
+        <h2 class="section-title">改善プラン（生活習慣）</h2>
+        <div class="checklist-grid">
+          <div class="checklist-item">
+            <div class="checkbox"></div>
+            <div><strong>エプソムソルト入浴</strong><br>マグネシウムを経皮吸収し、デトックスとリラックスを促進。</div>
+          </div>
+          <div class="checklist-item">
+            <div class="checkbox"></div>
+            <div><strong>4-7-8呼吸法</strong><br>意識的に副交感神経を優位にし、コルチゾールを下げる。</div>
+          </div>
+          <div class="checklist-item">
+            <div class="checkbox"></div>
+            <div><strong>デジタルデトックス</strong><br>就寝1時間前はスクリーンを見ず、睡眠ホルモンを整える。</div>
+          </div>
+          <div class="checklist-item">
+            <div class="checkbox"></div>
+            <div><strong>朝の日光浴</strong><br>概日リズムを整え、夜間の良質な睡眠を確保する。</div>
+          </div>
+          <div class="checklist-item">
+            <div class="checkbox"></div>
+            <div><strong>低強度の運動</strong><br>CK高値のため激しい運動は避け、散歩やヨガなどを中心に。</div>
+          </div>
+          <div class="checklist-item">
+            <div class="checkbox"></div>
+            <div>
+              <strong>グルテン・カゼインフリー</strong><br>炎症の原因となりうる小麦・乳製品を可能な範囲で控える。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. おわりに -->
+      <div class="section">
+        <h2 class="section-title">おわりに</h2>
+        <p>
+          今回の解析で見つかった多くの「高値」や「低値」は、決してネガティブなだけの結果ではありません。これらは体が発している「助けを求めるサイン」であり、適切な介入ポイントが明確になったことを意味します。
+        </p>
+        <p>
+          特にMTHFR遺伝子の特徴への対策を行うことで、これまで何となく感じていた不調の霧が晴れるように改善するケースが多く見られます。まずは優先度1の栄養素補給と、入浴習慣から始めてみてください。
+        </p>
+      </div>
+
+      <!-- 10. 前提条件 -->
+      <div class="section" style="background: #fafafa; font-size: 0.9em; color: #666">
+        <h4 style="margin-bottom: 10px">本レポートの前提条件（免責事項）</h4>
+        <p style="margin-bottom: 10px">
+          本レポートの推奨事項は、ご提供いただいた各種健康データに基づいた推察と、一般的な精密栄養学の知見に基づくアドバイスです。
+        </p>
+        <p style="margin-bottom: 0">
+          本レポートは医学的診断や治療に代わるものではありません。健康上の懸念や治療中の疾患については、必要な場合は主治医にご相談ください。また、お身体の状態は生活習慣によって変化するため、継続的なデータの取得を推奨いたします。
+        </p>
+      </div>
+
+      <!-- フッター -->
+      <footer class="footer">
+        <div class="logo-container" style="margin-bottom: 20px">
+          <img src="https://credo.iwate.jp/CREDO_logo.png" alt="CREDO Logo" style="max-width: 150px; opacity: 0.8" data-height-listener-added="true">
+        </div>
+        <div class="copyright">© 2026 CREDO. All Rights Reserved.</div>
+      </footer>
+    </div>
+  
+
+</body></html>
