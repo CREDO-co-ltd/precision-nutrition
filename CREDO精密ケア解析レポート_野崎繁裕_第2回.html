@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      (function() {
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            window.parent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            window.parent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            window.parent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        let requestId = 0;
+        let callbacksMap = new Map();
+        let streamControllers = new Map();
+        
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        window.storage = {
+          get: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+            });
+          },
+          set: (key, value, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+            });
+          },
+          delete: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+            });
+          },
+          list: (prefix, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+            });
+          }
+        };
+
+        let pendingBlobs = new Map();
+        URL.createObjectURL = (blob) => {
+          // Store the blob and create an ID and URL for it
+          const blobId = `blob-${Date.now()}-${Math.random()}`;
+          pendingBlobs.set(blobId, blob);
+          return `blob-request://${blobId}`;
+        };
+
+        URL.revokeObjectURL = (url) => {
+          // Remove the blob from our store
+          const blobId = url.replace("blob-request://", "");
+          pendingBlobs.delete(blobId);
+        };
+
+        const getBlobFromURL = (url) => {
+          const blobId = url.replace("blob-request://", "");
+          return pendingBlobs.get(blobId);
+        };
+
+        // Override global fetch with streaming support
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = requestId++;
+            const channelId = `fetch-${id}-${Date.now()}`;
+            
+            callbacksMap.set(id, { 
+              resolve: (response) => {
+                // Create a ReadableStream for the response body
+                const stream = new ReadableStream({
+                  start(controller) {
+                    streamControllers.set(channelId, controller);
+                  },
+                  cancel() {
+                    streamControllers.delete(channelId);
+                  }
+                });
+                
+                // Create and return the Response with the stream
+                resolve(new Response(stream, {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: response.headers
+                }));
+              },
+              reject,
+              channelId
+            });
+            
+            window.parent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+              channelId
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          if (event.data.type === 'takeScreenshot') {
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              window.parent.postMessage({
+                type: 'screenshotError',
+                error: new Error('Root element not found'),
+              }, '*');
+            }
+            const screenshot = await htmlToImage.toPng(rootElement, {
+              imagePlaceholder:
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+            });
+            window.parent.postMessage({
+              type: 'screenshotData',
+              data: screenshot,
+            }, '*');
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+              callbacksMap.delete(event.data.id);
+            } else {
+              // Initial response with headers, status, etc.
+              callback.resolve({
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              });
+              // Don't delete the callback yet if streaming
+              if (!event.data.body) {
+                callbacksMap.delete(event.data.id);
+              }
+            }
+          } else if (event.data.type === 'proxyFetchStream') {
+            // Handle streaming data chunks
+            const controller = streamControllers.get(event.data.channelId);
+            if (controller) {
+              if (event.data.error) {
+                controller.error(new Error(event.data.error));
+                streamControllers.delete(event.data.channelId);
+              } else if (event.data.done) {
+                controller.close();
+                streamControllers.delete(event.data.channelId);
+                // Clean up the callback
+                const callback = Array.from(callbacksMap.entries()).find(
+                  ([_, value]) => value.channelId === event.data.channelId
+                );
+                if (callback) {
+                  callbacksMap.delete(callback[0]);
+                }
+              } else if (event.data.chunk) {
+                controller.enqueue(new Uint8Array(event.data.chunk));
+              }
+            }
+          } else if (event.data.type === 'storageGet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageSet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageDelete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageList') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        window.addEventListener('click', (event) => {
+          const isEl = event.target instanceof HTMLElement;
+          if (!isEl) return;
+    
+          // find ancestor links
+          const linkEl = event.target.closest("a");
+          if (!linkEl || !linkEl.href) return;
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          if (linkEl.href.startsWith("blob-request:")) {
+            const blob = getBlobFromURL(linkEl.href);
+            if (!blob) return;
+            void blob.arrayBuffer().then((data) => {
+              window.parent.postMessage({
+                type: "downloadFile",
+                filename: linkEl.download,
+                data,
+                mimeType: blob.type || "application/octet-stream",
+              });
+            });
+          } else if (linkEl.href.startsWith("data:")) {
+            const [header, base64Data] = linkEl.href.split(",");
+            const mimeMatch = header.match(/data:([^;]+)/);
+            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+            const binaryString = atob(base64Data);
+            const data = Uint8Array.from(binaryString, (c) =>
+              c.charCodeAt(0),
+            ).buffer;
+            window.parent.postMessage({
+              type: "downloadFile",
+              filename: linkEl.download,
+              data,
+              mimeType,
+            });
+          } else {
+            let linkUrl;
+            try {
+              linkUrl = new URL(linkEl.href);
+            } catch (error) {
+              return;
+            }
+    
+            if (linkUrl.hostname === window.location.hostname) return;
+      
+            window.parent.postMessage({
+              type: 'openExternal',
+              href: linkEl.href,
+            }, '*');
+          }
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          window.parent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          window.parent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREDO精密ケア解析レポート - 野崎繁裕様 第2回</title>
+<style>
+:root {
+  --orange: #EF821D;
+  --yellow-orange: #F7B52C;
+  --red: #E95513;
+  --magenta: #BF2650;
+  --dark-magenta: #B71253;
+  --purple: #5F2C70;
+  --dark-purple: #8A385C;
+  --green: #2F765B;
+  --light-green: #4a9d7d;
+  --blue: #365393;
+  --coral: #E9565E;
+  --rose: #C0384D;
+  --dark-text: #2D2D2D;
+  --light-gray: #F5F5F5;
+  --med-gray: #E0E0E0;
+  --soft-bg: #FAFAFA;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Kaku Gothic Pro', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.7;
+  color: var(--dark-text);
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e0ed 100%);
+  padding: 20px;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+/* ===== ヘッダー ===== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 35px 50px;
+  background: white;
+  border-bottom: 3px solid;
+  border-image: linear-gradient(90deg, var(--purple), var(--magenta), var(--orange)) 1;
+}
+.logo { width: 160px; flex-shrink: 0; }
+.logo img { width: 100%; height: auto; display: block; }
+.header-content { text-align: right; flex: 1; }
+.report-title {
+  font-size: 2.2em;
+  font-weight: bold;
+  background: linear-gradient(135deg, var(--purple), var(--magenta), var(--orange));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.report-subtitle { font-size: 1.05em; color: #666; margin-bottom: 5px; }
+.report-date { color: #999; font-size: 1em; }
+.report-round {
+  display: inline-block;
+  padding: 3px 12px;
+  background: linear-gradient(135deg, var(--magenta), var(--orange));
+  color: white;
+  border-radius: 12px;
+  font-size: 0.78em;
+  font-weight: 600;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+}
+.client-name {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 18px;
+  background: linear-gradient(135deg, var(--purple), var(--magenta));
+  color: white;
+  border-radius: 20px;
+  font-size: 0.95em;
+  font-weight: 500;
+}
+
+/* ===== セクション ===== */
+.section {
+  padding: 45px 50px;
+  border-bottom: 1px solid var(--med-gray);
+  animation: fadeInUp 0.8s ease-out;
+}
+.section:last-of-type { border-bottom: none; }
+
+.section-title {
+  font-size: 1.7em;
+  font-weight: bold;
+  color: var(--purple);
+  margin-bottom: 25px;
+  position: relative;
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 28px;
+  background: linear-gradient(180deg, var(--purple), var(--magenta), var(--orange));
+  border-radius: 3px;
+}
+.section-title .icon { font-size: 1.1em; }
+
+.section-subtitle {
+  font-size: 1.25em;
+  font-weight: bold;
+  color: var(--dark-magenta);
+  margin: 30px 0 18px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f0d4e0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ===== TL;DR ===== */
+.tldr-box {
+  background: linear-gradient(135deg, #fff8f0 0%, #fef0f0 50%, #f8f0f8 100%);
+  border-left: 5px solid var(--magenta);
+  border-radius: 12px;
+  padding: 20px 25px;
+  margin: 0 0 25px 0;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.tldr-icon { font-size: 2em; flex-shrink: 0; line-height: 1; }
+.tldr-content { flex: 1; }
+.tldr-label {
+  font-size: 0.78em;
+  font-weight: bold;
+  color: var(--magenta);
+  letter-spacing: 0.15em;
+  margin-bottom: 6px;
+}
+.tldr-text { font-size: 1.02em; line-height: 1.7; }
+.tldr-text strong { color: var(--purple); }
+
+.highlight {
+  background: linear-gradient(135deg, #fdf6f0 0%, #f8e8f0 100%);
+  border-left: 5px solid var(--magenta);
+  padding: 22px 28px;
+  border-radius: 8px;
+  margin: 22px 0;
+}
+.highlight strong { color: var(--purple); font-weight: bold; }
+.highlight p { margin-bottom: 10px; }
+.highlight p:last-child { margin-bottom: 0; }
+
+.alert-box {
+  background: linear-gradient(135deg, #fff0f0, #ffe8e8);
+  border-left: 5px solid var(--coral);
+  padding: 18px 24px;
+  border-radius: 8px;
+  margin: 20px 0;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.alert-icon { font-size: 1.6em; flex-shrink: 0; }
+.alert-text { font-size: 0.96em; line-height: 1.7; }
+.alert-text strong { color: var(--coral); }
+
+.gene-box {
+  background: var(--light-gray);
+  border-top: 3px solid var(--purple);
+  padding: 18px 24px;
+  border-radius: 6px;
+  margin: 18px 0;
+}
+.gene-box::before {
+  content: '🧬 遺伝子傾向';
+  display: block;
+  font-size: 0.78em;
+  font-weight: bold;
+  color: var(--purple);
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+.gene-box p { font-size: 0.95em; line-height: 1.7; }
+.gene-box p:not(:last-child) { margin-bottom: 8px; }
+
+/* ===== 総合スコア ===== */
+.score-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 40px;
+  margin: 25px 0;
+  align-items: center;
+  animation: fadeInUp 0.8s ease-out;
+}
+.score-svg-container { display: flex; justify-content: center; align-items: center; }
+.category-scores { display: flex; flex-direction: column; gap: 18px; }
+.category-item {
+  display: grid;
+  grid-template-columns: 180px 1fr 70px;
+  align-items: center;
+  gap: 15px;
+  animation: slideIn 0.5s ease-out backwards;
+}
+.category-item:nth-child(1) { animation-delay: 0.1s; }
+.category-item:nth-child(2) { animation-delay: 0.2s; }
+.category-item:nth-child(3) { animation-delay: 0.3s; }
+.category-item:nth-child(4) { animation-delay: 0.4s; }
+
+.category-label {
+  font-size: 0.95em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.category-label span { font-size: 1.4em; }
+
+.progress-bar {
+  height: 24px;
+  background: var(--med-gray);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  animation: fillBar 1.5s ease-out forwards;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: shimmer 2s infinite;
+}
+.category-score { font-size: 1.4em; font-weight: bold; text-align: right; }
+
+/* ===== 主要所見カード ===== */
+.finding-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin: 25px 0;
+}
+.finding-card {
+  background: white;
+  border-radius: 14px;
+  padding: 18px 16px;
+  text-align: center;
+  border: 2px solid;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: cardPop 0.6s ease-out backwards;
+  position: relative;
+  overflow: hidden;
+}
+.finding-card:nth-child(1) { animation-delay: 0.1s; }
+.finding-card:nth-child(2) { animation-delay: 0.18s; }
+.finding-card:nth-child(3) { animation-delay: 0.26s; }
+.finding-card:nth-child(4) { animation-delay: 0.34s; }
+.finding-card:nth-child(5) { animation-delay: 0.42s; }
+.finding-card:hover { transform: translateY(-4px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.finding-card.severity-high { border-color: var(--coral); background: linear-gradient(180deg, #fff5f5, white); }
+.finding-card.severity-mid { border-color: var(--orange); background: linear-gradient(180deg, #fff8f0, white); }
+.finding-card.severity-low { border-color: var(--yellow-orange); background: linear-gradient(180deg, #fffaee, white); }
+
+.finding-icon { font-size: 2.2em; margin-bottom: 8px; }
+.finding-label { font-size: 0.85em; font-weight: bold; color: #666; margin-bottom: 6px; }
+.finding-value { font-size: 1.4em; font-weight: bold; margin-bottom: 4px; }
+.finding-card.severity-high .finding-value { color: var(--coral); }
+.finding-card.severity-mid .finding-value { color: var(--orange); }
+.finding-card.severity-low .finding-value { color: var(--yellow-orange); }
+.finding-target { font-size: 0.75em; color: #888; }
+.finding-name { font-size: 0.92em; font-weight: 600; margin-top: 8px; color: var(--purple); }
+
+/* ===== 良好土台 ===== */
+.foundation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+.foundation-card {
+  background: linear-gradient(135deg, #f0f8f4, #e8f5ee);
+  border: 2px solid var(--light-green);
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+}
+.foundation-icon { font-size: 1.6em; margin-bottom: 4px; }
+.foundation-name { font-size: 0.82em; color: #555; font-weight: 600; }
+.foundation-value { font-size: 1.05em; font-weight: bold; color: var(--green); margin-top: 4px; }
+
+/* ===== メチル化回路図 ===== */
+.methylation-diagram {
+  background: linear-gradient(135deg, #faf6f8, #f5ecf2);
+  border-radius: 16px;
+  padding: 30px 25px;
+  margin: 25px 0;
+}
+.methylation-title {
+  text-align: center;
+  font-weight: bold;
+  color: var(--purple);
+  font-size: 1.1em;
+  margin-bottom: 20px;
+}
+.methylation-svg-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 0 -10px;
+}
+.methylation-svg-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ===== 病態連鎖 ===== */
+.chain-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  align-items: center;
+  margin: 20px 0;
+}
+.chain-node {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 8px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border-top: 3px solid;
+}
+.chain-node.n1 { border-color: var(--coral); }
+.chain-node.n2 { border-color: var(--orange); }
+.chain-node.n3 { border-color: var(--magenta); }
+.chain-node.n4 { border-color: var(--purple); }
+.chain-node.n5 { border-color: var(--blue); }
+
+.chain-icon { font-size: 1.8em; margin-bottom: 4px; }
+.chain-label { font-size: 0.82em; font-weight: bold; line-height: 1.3; }
+.chain-detail { font-size: 0.7em; color: #888; margin-top: 4px; }
+.chain-arrow {
+  text-align: center;
+  font-size: 1.5em;
+  color: var(--magenta);
+  font-weight: bold;
+}
+
+/* ===== Before/After バー ===== */
+.ba-section { margin: 25px 0; }
+.ba-item {
+  background: var(--soft-bg);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
+}
+.ba-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.ba-name { font-weight: bold; font-size: 1.05em; color: var(--purple); }
+.ba-status {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.75em;
+  color: white;
+  font-weight: 600;
+}
+.ba-bar-wrap { position: relative; height: 36px; background: white; border-radius: 18px; overflow: hidden; border: 1px solid var(--med-gray); }
+.ba-target-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(47, 118, 91, 0.15), rgba(74, 157, 125, 0.25));
+  border-left: 2px dashed var(--green);
+  border-right: 2px dashed var(--green);
+}
+.ba-current {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 26px;
+  background: var(--coral);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(233, 86, 94, 0.4);
+}
+.ba-current::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--coral);
+}
+.ba-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 0.82em;
+  color: #666;
+}
+.ba-labels .ba-current-label { color: var(--coral); font-weight: bold; }
+.ba-labels .ba-target-label { color: var(--green); font-weight: bold; }
+
+/* ===== パラドックス対比カード ===== */
+.paradox-grid {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin: 25px 0;
+}
+.paradox-card {
+  background: white;
+  border-radius: 14px;
+  padding: 20px 22px;
+  border: 2px solid;
+  text-align: center;
+}
+.paradox-card.left { border-color: var(--blue); background: linear-gradient(180deg, #f0f4fa, white); }
+.paradox-card.right { border-color: var(--coral); background: linear-gradient(180deg, #fff5f5, white); }
+.paradox-card .pc-label { font-size: 0.85em; color: #666; margin-bottom: 8px; font-weight: 600; }
+.paradox-card .pc-value { font-size: 1.6em; font-weight: bold; margin-bottom: 6px; }
+.paradox-card.left .pc-value { color: var(--blue); }
+.paradox-card.right .pc-value { color: var(--coral); }
+.paradox-card .pc-interpret { font-size: 0.85em; color: #555; line-height: 1.5; }
+.paradox-vs {
+  text-align: center;
+  font-size: 1.3em;
+  font-weight: bold;
+  color: var(--magenta);
+  letter-spacing: 0.05em;
+}
+
+/* ===== スコアテーブル ===== */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 20px 0;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.93em;
+  min-width: 600px;
+}
+.score-table thead { background: linear-gradient(135deg, var(--purple), var(--magenta)); }
+.score-table th { padding: 12px 16px; text-align: left; color: white; font-weight: 600; font-size: 0.92em; }
+.score-table td { padding: 12px 16px; border-bottom: 1px solid var(--med-gray); }
+.score-table tr:last-child td { border-bottom: none; }
+.score-table tr:hover { background: #fafafa; }
+.score-table tr.row-bad { background: #fff8f8; }
+.score-table tr.row-warn { background: #fffaf2; }
+.score-table tr.row-good { background: #f7faf8; }
+
+.value-bad { color: var(--coral); font-weight: bold; }
+.value-warn { color: var(--orange); font-weight: bold; }
+.value-good { color: var(--green); font-weight: bold; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 12px;
+  font-size: 0.78em;
+  color: white;
+  font-weight: 600;
+}
+.badge-bad { background: linear-gradient(135deg, var(--coral), var(--rose)); }
+.badge-warn { background: linear-gradient(135deg, var(--orange), var(--yellow-orange)); }
+.badge-good { background: linear-gradient(135deg, var(--green), var(--light-green)); }
+
+/* ===== 詳細データ折りたたみ ===== */
+details.detail-data {
+  background: var(--soft-bg);
+  border-radius: 10px;
+  margin: 12px 0;
+  border: 1px solid var(--med-gray);
+}
+details.detail-data summary {
+  padding: 14px 22px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--purple);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+details.detail-data summary::-webkit-details-marker { display: none; }
+details.detail-data summary::after {
+  content: '▼';
+  font-size: 0.7em;
+  transition: transform 0.3s;
+  color: var(--magenta);
+}
+details.detail-data[open] summary::after { transform: rotate(180deg); }
+details.detail-data .details-content { padding: 0 22px 18px; font-size: 0.93em; line-height: 1.75; }
+details.detail-data .details-content p { margin-bottom: 10px; }
+details.detail-data .details-content p:last-child { margin-bottom: 0; }
+details.detail-data .details-content strong { color: var(--purple); }
+
+/* ===== Quick Win バナー ===== */
+.quickwin-banner {
+  background: linear-gradient(135deg, #fff8e8, #fef0d8);
+  border: 2px dashed var(--orange);
+  border-radius: 14px;
+  padding: 22px 26px;
+  margin: 25px 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.quickwin-icon { font-size: 2.5em; flex-shrink: 0; }
+.quickwin-content { flex: 1; }
+.quickwin-label {
+  font-size: 0.78em;
+  font-weight: bold;
+  color: var(--orange);
+  letter-spacing: 0.15em;
+  margin-bottom: 6px;
+}
+.quickwin-title { font-size: 1.15em; font-weight: bold; color: var(--purple); margin-bottom: 8px; }
+.quickwin-items { display: flex; flex-wrap: wrap; gap: 10px; }
+.quickwin-item {
+  background: white;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.88em;
+  font-weight: 500;
+  border: 1px solid var(--orange);
+  color: var(--purple);
+}
+
+/* ===== 食事カード ===== */
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 22px 0;
+}
+.food-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease;
+  animation: cardPop 0.6s ease-out backwards;
+}
+.food-card:nth-child(1) { animation-delay: 0.1s; }
+.food-card:nth-child(2) { animation-delay: 0.15s; }
+.food-card:nth-child(3) { animation-delay: 0.2s; }
+.food-card:nth-child(4) { animation-delay: 0.25s; }
+.food-card:hover { transform: translateY(-3px); }
+
+.food-card-header { padding: 14px 16px; color: white; font-weight: bold; font-size: 0.95em; text-align: center; }
+.food-card:nth-child(1) .food-card-header { background: linear-gradient(135deg, var(--purple), var(--magenta)); }
+.food-card:nth-child(2) .food-card-header { background: linear-gradient(135deg, var(--coral), var(--rose)); }
+.food-card:nth-child(3) .food-card-header { background: linear-gradient(135deg, var(--orange), var(--yellow-orange)); }
+.food-card:nth-child(4) .food-card-header { background: linear-gradient(135deg, var(--green), var(--light-green)); }
+
+.food-card-body { padding: 14px 16px; }
+.food-card-body ul { list-style: none; padding: 0; }
+.food-card-body li { padding: 6px 0; border-bottom: 1px dotted var(--med-gray); font-size: 0.88em; }
+.food-card-body li:last-child { border-bottom: none; }
+.food-card-body li::before { content: '✓ '; color: var(--green); font-weight: bold; margin-right: 4px; }
+
+/* ===== タイムライン ===== */
+.timeline { margin: 22px 0; }
+.timeline-item {
+  display: grid;
+  grid-template-columns: 90px 50px 1fr 180px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--light-gray);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  animation: slideIn 0.5s ease-out backwards;
+}
+.timeline-item:nth-child(1) { animation-delay: 0.1s; }
+.timeline-item:nth-child(2) { animation-delay: 0.15s; }
+.timeline-item:nth-child(3) { animation-delay: 0.2s; }
+.timeline-item:nth-child(4) { animation-delay: 0.25s; }
+.timeline-item:nth-child(5) { animation-delay: 0.3s; }
+.timeline-item:nth-child(6) { animation-delay: 0.35s; }
+.timeline-item:nth-child(7) { animation-delay: 0.4s; }
+
+.timeline-time { font-weight: bold; font-size: 1em; color: var(--purple); }
+.timeline-icon { font-size: 1.7em; text-align: center; }
+.timeline-action { font-size: 0.92em; line-height: 1.5; }
+.timeline-effect { font-size: 0.78em; padding: 5px 10px; border-radius: 8px; text-align: center; font-weight: 500; }
+.effect-morning { background: linear-gradient(135deg, var(--yellow-orange), var(--orange)); color: white; }
+.effect-noon { background: linear-gradient(135deg, var(--orange), var(--red)); color: white; }
+.effect-afternoon { background: linear-gradient(135deg, var(--green), var(--light-green)); color: white; }
+.effect-evening { background: linear-gradient(135deg, var(--purple), var(--dark-magenta)); color: white; }
+.effect-night { background: linear-gradient(135deg, var(--dark-purple), var(--blue)); color: white; }
+.effect-stop { background: linear-gradient(135deg, var(--coral), var(--rose)); color: white; }
+
+/* ===== Doshaカード ===== */
+.dosha-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+  margin: 22px 0;
+}
+.dosha-card {
+  border-radius: 16px;
+  padding: 26px 24px;
+  color: white;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+  animation: cardPop 0.6s ease-out backwards;
+}
+.dosha-card:nth-child(1) { animation-delay: 0.1s; }
+.dosha-card:nth-child(2) { animation-delay: 0.2s; }
+.dosha-card h4 { font-size: 1.3em; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.dosha-card p { font-size: 0.92em; line-height: 1.7; margin-bottom: 8px; opacity: 0.95; }
+
+/* ===== チェックリスト ===== */
+.checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 22px 0;
+}
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--light-gray);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.checklist-item:hover { background: #ede0f0; transform: translateX(4px); }
+.checkbox {
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--purple);
+  border-radius: 6px;
+  background: white;
+  position: relative;
+  flex-shrink: 0;
+}
+.checklist-item.checked .checkbox {
+  background: linear-gradient(135deg, var(--green), var(--light-green));
+  border-color: var(--green);
+}
+.checklist-item.checked .checkbox::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+.checklist-text { font-size: 0.93em; flex: 1; }
+
+/* ===== 課題ブロック ===== */
+.issue-block {
+  background: white;
+  border: 2px solid #f0e0e8;
+  border-radius: 12px;
+  padding: 0;
+  margin: 16px 0;
+  position: relative;
+  animation: fadeInUp 0.6s ease-out;
+  overflow: hidden;
+}
+.issue-block::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--coral), var(--magenta));
+}
+.issue-header {
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.issue-title {
+  font-size: 1.05em;
+  color: var(--dark-magenta);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.issue-priority {
+  display: inline-block;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, var(--coral), var(--rose));
+  color: white;
+  font-size: 0.72em;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.issue-priority.mid { background: linear-gradient(135deg, var(--orange), var(--yellow-orange)); }
+.issue-priority.low { background: linear-gradient(135deg, var(--green), var(--light-green)); }
+
+.issue-content { padding: 0 22px 18px; font-size: 0.93em; line-height: 1.75; }
+.issue-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.issue-action {
+  background: var(--soft-bg);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.86em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.issue-action .a-icon { color: var(--green); font-weight: bold; }
+
+/* ===== 比較カード（前回→今回） ===== */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 22px 0;
+}
+.comparison-card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px 16px;
+  border: 1px solid var(--med-gray);
+  text-align: center;
+}
+.comparison-name { font-size: 0.88em; color: #666; margin-bottom: 10px; font-weight: 600; }
+.comparison-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+.comparison-arrow { color: var(--magenta); }
+.comparison-prev { color: #999; }
+.comparison-curr.up { color: var(--coral); }
+.comparison-curr.down { color: var(--green); }
+.comparison-curr.same { color: #888; }
+
+/* ===== ダウンロード ===== */
+.download-bar {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, var(--purple), var(--magenta));
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 0.92em;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(95, 44, 112, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.dl-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(95, 44, 112, 0.5); }
+.dl-btn:active { transform: translateY(0); }
+.dl-btn .dl-icon { font-size: 1.1em; }
+.dl-btn.secondary { background: linear-gradient(135deg, var(--green), var(--light-green)); box-shadow: 0 4px 16px rgba(47, 118, 91, 0.35); }
+.dl-btn.secondary:hover { box-shadow: 0 6px 22px rgba(47, 118, 91, 0.5); }
+
+@media (max-width: 768px) {
+  .download-bar { top: auto; bottom: 12px; right: 12px; left: 12px; flex-direction: row; justify-content: center; }
+  .dl-btn { padding: 10px 16px; font-size: 0.85em; flex: 1; justify-content: center; }
+}
+@media print {
+  .download-bar { display: none !important; }
+  .inline-download { display: none !important; }
+}
+
+.inline-download {
+  background: linear-gradient(135deg, #faf6f8 0%, #f5ecf2 100%);
+  border: 2px dashed var(--purple);
+  border-radius: 14px;
+  padding: 25px 30px;
+  margin: 25px 0;
+  text-align: center;
+}
+.inline-download h4 { color: var(--purple); font-size: 1.15em; margin-bottom: 8px; }
+.inline-download p { color: #666; font-size: 0.92em; margin-bottom: 16px; }
+.inline-download .dl-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ===== フッター ===== */
+.footer {
+  background: white;
+  padding: 35px 50px;
+  border-top: 3px solid;
+  border-image: linear-gradient(90deg, var(--orange), var(--magenta), var(--purple)) 1;
+  text-align: center;
+}
+.footer-logo { width: 130px; margin: 0 auto 15px; }
+.footer-logo img { width: 100%; height: auto; display: block; }
+.next-checkup-btn {
+  display: inline-block;
+  margin: 18px 0;
+  padding: 14px 36px;
+  background: linear-gradient(135deg, var(--green), var(--light-green));
+  color: white;
+  border-radius: 30px;
+  font-size: 1.02em;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(47, 118, 91, 0.3);
+  animation: pulse 2s infinite;
+}
+.footer-note {
+  font-size: 0.82em;
+  color: #888;
+  margin-top: 18px;
+  line-height: 1.7;
+  text-align: left;
+  background: var(--light-gray);
+  padding: 16px 20px;
+  border-radius: 8px;
+}
+.footer-note p:not(:last-child) { margin-bottom: 8px; }
+
+/* ===== アニメーション ===== */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fillBar { from { width: 0; } }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes cardPop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes drawCircle { from { stroke-dashoffset: 565.48; } to { stroke-dashoffset: 316.7; } }
+
+/* ===== タブレット ===== */
+@media (max-width: 768px) {
+  body { font-size: 15px; padding: 10px; }
+  .container { border-radius: 10px; }
+  .header { flex-direction: column; text-align: center; padding: 25px 20px; gap: 18px; }
+  .header-content { text-align: center; }
+  .report-title { font-size: 1.6em; }
+  .section { padding: 30px 20px; }
+  .section-title { font-size: 1.35em; }
+  .section-subtitle { font-size: 1.1em; }
+  .score-container { grid-template-columns: 1fr; gap: 25px; }
+  .score-svg-container svg { width: 230px; height: 230px; }
+  .category-item { grid-template-columns: 130px 1fr 60px; gap: 12px; }
+  .finding-cards { grid-template-columns: repeat(2, 1fr); }
+  .food-grid, .dosha-grid, .checklist-grid { grid-template-columns: 1fr; gap: 16px; }
+  .foundation-grid { grid-template-columns: repeat(2, 1fr); }
+  .chain-grid { grid-template-columns: 1fr; }
+  .chain-arrow { transform: rotate(90deg); margin: -4px 0; }
+  .timeline-item { grid-template-columns: 70px 40px 1fr; gap: 10px; }
+  .timeline-effect { grid-column: 1 / -1; margin-top: 6px; }
+  .quickwin-banner { flex-direction: column; text-align: center; }
+  .issue-actions { grid-template-columns: 1fr; }
+  .footer { padding: 25px 20px; }
+  .tldr-box { flex-direction: column; gap: 10px; }
+  .paradox-grid { grid-template-columns: 1fr; gap: 12px; }
+  .paradox-vs { transform: rotate(90deg); }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+
+/* ===== スマホ ===== */
+@media (max-width: 480px) {
+  body { font-size: 14px; padding: 8px; }
+  .section { padding: 25px 14px; }
+  .section-title { font-size: 1.25em; }
+  .report-title { font-size: 1.4em; }
+  .category-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    background: var(--light-gray);
+    padding: 14px;
+    border-radius: 10px;
+  }
+  .category-label { display: flex; justify-content: space-between; font-size: 1em; }
+  .category-label span { font-size: 1.5em; }
+  .category-score { font-size: 1.6em; text-align: right; }
+  .progress-bar { order: 3; }
+  .score-svg-container svg { width: 200px; height: 200px; }
+  .finding-cards { grid-template-columns: 1fr; }
+  .score-table { font-size: 0.85em; }
+  .score-table th, .score-table td { padding: 10px 8px; }
+  .timeline-item { grid-template-columns: 1fr; text-align: left; }
+  .timeline-time, .timeline-icon { display: inline-block; }
+}
+
+@media (max-width: 360px) {
+  .report-title { font-size: 1.25em; }
+  .section-title { font-size: 1.1em; }
+  .score-svg-container svg { width: 180px; height: 180px; }
+}
+
+/* ===== PDF出力 ===== */
+@media print {
+  body { background: white !important; padding: 0 !important; }
+  .container { box-shadow: none !important; border-radius: 0 !important; max-width: 100% !important; }
+  @page { margin: 1.5cm; size: A4; }
+  .section, .priority-card, .food-card, .dosha-card, .gene-box, .highlight,
+  .issue-block, .timeline-item, .finding-card, .chain-node, .ba-item, .foundation-card,
+  .paradox-card, .comparison-card {
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+  .header { page-break-after: avoid; }
+  h2, h3, h4 { page-break-after: avoid; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; animation: none !important; transition: none !important; }
+  details.detail-data .details-content { display: block !important; }
+  .next-checkup-btn { display: none; }
+  .score-table { page-break-inside: auto; }
+  .score-table tr { page-break-inside: avoid; }
+  .score-table thead { display: table-header-group; }
+}
+</style>
+</head>
+<body id="artifacts-component-root-html">
+
+<!-- ダウンロードバー -->
+<div class="download-bar">
+  <button class="dl-btn" id="dlHtmlBtn" onclick="downloadHTML()">
+    <span class="dl-icon">📥</span>
+    <span>HTMLをダウンロード</span>
+  </button>
+  <button class="dl-btn secondary" onclick="window.print()">
+    <span class="dl-icon">🖨️</span>
+    <span>PDFとして保存</span>
+  </button>
+</div>
+
+<div class="container">
+
+  <!-- ヘッダー -->
+  <header class="header">
+    <div class="logo">
+      <img src="LOGO_PLACEHOLDER" alt="CREDO Co., Ltd. Logo">
+    </div>
+    <div class="header-content">
+      <h1 class="report-title">CREDO精密ケア解析レポート</h1>
+      <p class="report-subtitle">Precision Nutrition Analysis Report <span class="report-round">第2回</span></p>
+      <p class="report-date">解析日：2026年5月7日</p>
+      <span class="client-name">野崎 繁裕 様（45歳・男性・181.0cm・78kg）</span>
+    </div>
+  </header>
+
+  <!-- ===== はじめに ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">📖</span>はじめに</h2>
+    <div class="tldr-box">
+      <div class="tldr-icon">🧬</div>
+      <div class="tldr-content">
+        <div class="tldr-label">第2回レポートの主題</div>
+        <div class="tldr-text">今回は野崎様がご関心をお持ちの<strong>ホモシステイン値とメチル化(メチレーション)回路</strong>を中心に解析いたします。「ヒスタミンからは高メチレーションと判断されうる数値なのにホモシステインが高い」という<strong>一見矛盾した所見</strong>を、メチル化回路の特定ステップにある遺伝的・栄養的ボトルネックという視点から丁寧に解きほぐします。</div>
+      </div>
+    </div>
+    <p style="font-size: 0.95em; color: #666;">本レポートは医学的診断や治療に代わるものではありません。お薬(フィンペシア等)に関するご不安は主治医にご相談ください。3〜6か月ごとの継続的な再検査を推奨いたします。</p>
+  </section>
+
+  <!-- ===== 総合評価 ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">📊</span>総合的な健康状態の評価</h2>
+
+    <div class="tldr-box">
+      <div class="tldr-icon">🎯</div>
+      <div class="tldr-content">
+        <div class="tldr-label">CONCLUSION</div>
+        <div class="tldr-text"><strong>メチル化回路の機能低下によるホモシステイン蓄積</strong>が今回の最重要所見です。慢性免疫ストレス、副腎機能低下、ビタミンD・マグネシウム不足が複合的に絡みますが、糖代謝(HOMA-IR 0.59)・甲状腺機能・男性ホルモンの土台は良好。<strong>ターゲットを絞った栄養戦略で十分な改善が見込める状態</strong>です。</div>
+      </div>
+    </div>
+
+    <!-- 総合スコア -->
+    <div class="score-container">
+      <div class="score-svg-container">
+        <svg width="280" height="280" viewBox="0 0 280 280">
+          <circle cx="140" cy="140" r="90" fill="none" stroke="#E0E0E0" stroke-width="20"></circle>
+          <defs>
+            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#EF821D;stop-opacity:1"></stop>
+              <stop offset="50%" style="stop-color:#BF2650;stop-opacity:1"></stop>
+              <stop offset="100%" style="stop-color:#5F2C70;stop-opacity:1"></stop>
+            </linearGradient>
+          </defs>
+          <circle cx="140" cy="140" r="90" fill="none" stroke="url(#scoreGradient)" stroke-width="20" stroke-linecap="round" stroke-dasharray="565.48" stroke-dashoffset="316.7" transform="rotate(-90 140 140)" style="animation: drawCircle 2s ease-out forwards"></circle>
+          <text x="140" y="125" text-anchor="middle" font-size="48" font-weight="bold" fill="#5F2C70">44</text>
+          <text x="140" y="155" text-anchor="middle" font-size="24" fill="#666">/100点</text>
+          <text x="140" y="185" text-anchor="middle" font-size="16" fill="#999">総合スコア</text>
+        </svg>
+      </div>
+
+      <div class="category-scores">
+        <div class="category-item">
+          <div class="category-label"><span style="color: var(--coral)">🧬</span> メチル化回路</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 35%; background: linear-gradient(90deg, var(--coral), var(--rose));"></div></div>
+          <div class="category-score" style="color: var(--coral)">35</div>
+        </div>
+        <div class="category-item">
+          <div class="category-label"><span style="color: var(--orange)">🔥</span> 炎症・鉄代謝</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 50%; background: linear-gradient(90deg, var(--orange), var(--yellow-orange));"></div></div>
+          <div class="category-score" style="color: var(--orange)">50</div>
+        </div>
+        <div class="category-item">
+          <div class="category-label"><span style="color: var(--purple)">🫀</span> 脂質代謝</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 45%; background: linear-gradient(90deg, var(--purple), var(--magenta));"></div></div>
+          <div class="category-score" style="color: var(--purple)">45</div>
+        </div>
+        <div class="category-item">
+          <div class="category-label"><span style="color: var(--green)">🩸</span> 副腎・ストレス機能</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 45%; background: linear-gradient(90deg, var(--green), var(--light-green));"></div></div>
+          <div class="category-score" style="color: var(--green)">45</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主要所見 -->
+    <h3 class="section-subtitle">⚡ 5つの主要所見</h3>
+    <div class="finding-cards">
+      <div class="finding-card severity-high">
+        <div class="finding-icon">🧬</div>
+        <div class="finding-label">PRIORITY 1</div>
+        <div class="finding-value">15.6</div>
+        <div class="finding-target">理想 6.5〜7.5 nmol/mL</div>
+        <div class="finding-name">ホモシステイン<br>(メチル化異常)</div>
+      </div>
+      <div class="finding-card severity-high">
+        <div class="finding-icon">🐟</div>
+        <div class="finding-label">PRIORITY 2</div>
+        <div class="finding-value">0.12</div>
+        <div class="finding-target">理想 0.5以上</div>
+        <div class="finding-name">EPA/AA比<br>(炎症体質)</div>
+      </div>
+      <div class="finding-card severity-high">
+        <div class="finding-icon">☀️</div>
+        <div class="finding-label">PRIORITY 3</div>
+        <div class="finding-value">24.3</div>
+        <div class="finding-target">理想 60〜80 ng/mL</div>
+        <div class="finding-name">ビタミンD不足</div>
+      </div>
+      <div class="finding-card severity-mid">
+        <div class="finding-icon">🔥</div>
+        <div class="finding-label">PRIORITY 4</div>
+        <div class="finding-value">306</div>
+        <div class="finding-target">理想 100〜150 ng/mL</div>
+        <div class="finding-name">フェリチン高値<br>(機能性鉄欠乏)</div>
+      </div>
+      <div class="finding-card severity-mid">
+        <div class="finding-icon">🩸</div>
+        <div class="finding-label">PRIORITY 5</div>
+        <div class="finding-value">3.5</div>
+        <div class="finding-target">理想 4〜6 μg/dL</div>
+        <div class="finding-name">コルチゾール低値<br>(副腎疲労)</div>
+      </div>
+    </div>
+
+    <!-- 良好土台 -->
+    <h3 class="section-subtitle">✨ 良好に保たれている「土台」</h3>
+    <div class="foundation-grid">
+      <div class="foundation-card">
+        <div class="foundation-icon">🌡️</div>
+        <div class="foundation-name">インスリン感受性</div>
+        <div class="foundation-value">HOMA-IR 0.59</div>
+      </div>
+      <div class="foundation-card">
+        <div class="foundation-icon">🦋</div>
+        <div class="foundation-name">甲状腺機能</div>
+        <div class="foundation-value">TSH 0.88</div>
+      </div>
+      <div class="foundation-card">
+        <div class="foundation-icon">💪</div>
+        <div class="foundation-name">テストステロン</div>
+        <div class="foundation-value">11.20 ng/mL</div>
+      </div>
+      <div class="foundation-card">
+        <div class="foundation-icon">🍽️</div>
+        <div class="foundation-name">胃酸分泌</div>
+        <div class="foundation-value">PGI/II 6.3</div>
+      </div>
+    </div>
+    <p style="font-size: 0.95em; color: #555; margin-top: 14px;">
+      糖代謝・甲状腺・男性ホルモン・胃酸分泌の<strong style="color:var(--green);">基礎代謝の土台が強固</strong>です。改善ポイントが明確であり、土台が整っているため、正しいアプローチで身体は必ず応えてくれます。
+    </p>
+  </section>
+
+  <!-- ===== ホモシステインと矛盾の解明 ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🧩</span>「矛盾」の解明 — ヒスタミン vs ホモシステイン</h2>
+
+    <div class="tldr-box">
+      <div class="tldr-icon">🔬</div>
+      <div class="tldr-content">
+        <div class="tldr-label">CORE INSIGHT</div>
+        <div class="tldr-text">ヒスタミンは「メチル化されている」のに、ホモシステインは「リサイクルされていない」。これはメチル化回路が<strong>均一に動いているわけではない</strong>ことを意味し、<strong>特定ステップ(MTHFR / BHMT)の局所的なボトルネック</strong>を示唆しています。</div>
+      </div>
+    </div>
+
+    <div class="paradox-grid">
+      <div class="paradox-card left">
+        <div class="pc-label">📊 ヒスタミン濃度</div>
+        <div class="pc-value">高メチル化 示唆</div>
+        <div class="pc-interpret">ヒスタミンのメチル化(分解)は<strong>進んでいる</strong>。この経路ではメチル基が消費されている。</div>
+      </div>
+      <div class="paradox-vs">VS</div>
+      <div class="paradox-card right">
+        <div class="pc-label">🩸 ホモシステイン</div>
+        <div class="pc-value">15.6 nmol/mL</div>
+        <div class="pc-interpret">理想値の<strong>約2倍</strong>。リサイクル(メチオニンへの変換)が<strong>追いついていない</strong>。</div>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <p>📌 <strong>解釈：</strong> SAMe → SAH → ホモシステイン の流れは活発(メチル基消費は起きている)が、<strong>ホモシステイン → メチオニンへの「戻し」工程</strong> (MTHFR経路 / BHMT経路) にボトルネックが存在。結果、ヒスタミンのメチル化は行われている(ゆえに高くない)が、ホモシステインの再処理が間に合わず蓄積する状態。</p>
+    </div>
+
+    <h3 class="section-subtitle">🧬 メチル化回路フロー図</h3>
+    <div class="methylation-diagram">
+      <div class="methylation-title">3つの経路 — 入口は活発、出口で渋滞</div>
+      <div class="methylation-svg-wrapper">
+        <svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowFlow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 z" fill="#5F2C70"></path>
+            </marker>
+            <marker id="arrowBlock" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 z" fill="#E9565E"></path>
+            </marker>
+            <linearGradient id="boxFlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fdf6f0"></stop>
+              <stop offset="100%" stop-color="#f8e8f0"></stop>
+            </linearGradient>
+            <linearGradient id="boxBlock" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fff5f5"></stop>
+              <stop offset="100%" stop-color="#ffd5d5"></stop>
+            </linearGradient>
+            <linearGradient id="boxNormal" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f5f5f5"></stop>
+              <stop offset="100%" stop-color="#e8e8e8"></stop>
+            </linearGradient>
+          </defs>
+
+          <!-- メチオニン → SAMe → SAH → ホモシステイン (上段) -->
+          <rect x="20" y="40" width="140" height="60" rx="10" fill="url(#boxNormal)" stroke="#5F2C70" stroke-width="2"></rect>
+          <text x="90" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#5F2C70">メチオニン</text>
+          <text x="90" y="90" text-anchor="middle" font-size="12" fill="#666">Methionine</text>
+
+          <line x1="160" y1="70" x2="200" y2="70" stroke="#5F2C70" stroke-width="2" marker-end="url(#arrowFlow)"></line>
+
+          <rect x="200" y="40" width="140" height="60" rx="10" fill="url(#boxFlow)" stroke="#5F2C70" stroke-width="2"></rect>
+          <text x="270" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#5F2C70">SAMe</text>
+          <text x="270" y="90" text-anchor="middle" font-size="11" fill="#666">メチル基供与体</text>
+
+          <line x1="340" y1="70" x2="380" y2="70" stroke="#5F2C70" stroke-width="2" marker-end="url(#arrowFlow)"></line>
+
+          <rect x="380" y="40" width="140" height="60" rx="10" fill="url(#boxFlow)" stroke="#5F2C70" stroke-width="2"></rect>
+          <text x="450" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#5F2C70">SAH</text>
+          <text x="450" y="90" text-anchor="middle" font-size="11" fill="#666">メチル基放出後</text>
+
+          <line x1="520" y1="70" x2="560" y2="70" stroke="#5F2C70" stroke-width="2" marker-end="url(#arrowFlow)"></line>
+
+          <rect x="560" y="40" width="160" height="60" rx="10" fill="url(#boxBlock)" stroke="#E9565E" stroke-width="3"></rect>
+          <text x="640" y="68" text-anchor="middle" font-size="16" font-weight="bold" fill="#C0384D">ホモシステイン</text>
+          <text x="640" y="88" text-anchor="middle" font-size="11" fill="#C0384D">⚠️ 15.6 nmol/mL</text>
+
+          <!-- ヒスタミン分解(SAMeから派生) -->
+          <line x1="270" y1="100" x2="270" y2="140" stroke="#5F2C70" stroke-width="2" marker-end="url(#arrowFlow)"></line>
+          <text x="290" y="125" font-size="11" fill="#5F2C70" font-style="italic">ヒスタミン分解</text>
+          <rect x="200" y="140" width="140" height="50" rx="10" fill="#f0f4fa" stroke="#365393" stroke-width="2"></rect>
+          <text x="270" y="165" text-anchor="middle" font-size="13" font-weight="bold" fill="#365393">ヒスタミン↓</text>
+          <text x="270" y="182" text-anchor="middle" font-size="10" fill="#666">高メチル化方向</text>
+
+          <!-- ホモシステインから3つの経路 -->
+          <!-- 経路1: MTHFR (メチオニンへリサイクル) -->
+          <path d="M 640 100 Q 640 180 350 230" fill="none" stroke="#E9565E" stroke-width="3" stroke-dasharray="6,3" marker-end="url(#arrowBlock)"></path>
+          <rect x="200" y="220" width="200" height="70" rx="10" fill="url(#boxBlock)" stroke="#E9565E" stroke-width="2.5"></rect>
+          <text x="300" y="245" text-anchor="middle" font-size="14" font-weight="bold" fill="#C0384D">⚠️ 経路1: MTHFR経路</text>
+          <text x="300" y="263" text-anchor="middle" font-size="11" fill="#666">葉酸→5-MTHF→B12でリメチル化</text>
+          <text x="300" y="280" text-anchor="middle" font-size="11" fill="#C0384D" font-weight="bold">C677T多型でボトルネック</text>
+
+          <!-- 経路2: BHMT (ベタイン経路) -->
+          <line x1="640" y1="100" x2="640" y2="220" stroke="#E9565E" stroke-width="3" stroke-dasharray="6,3" marker-end="url(#arrowBlock)"></line>
+          <rect x="540" y="220" width="200" height="70" rx="10" fill="url(#boxBlock)" stroke="#E9565E" stroke-width="2.5"></rect>
+          <text x="640" y="245" text-anchor="middle" font-size="14" font-weight="bold" fill="#C0384D">⚠️ 経路2: BHMT経路</text>
+          <text x="640" y="263" text-anchor="middle" font-size="11" fill="#666">ベタイン(コリン)で代替リメチル化</text>
+          <text x="640" y="280" text-anchor="middle" font-size="11" fill="#C0384D" font-weight="bold">BUN低値→コリン不足の可能性</text>
+
+          <!-- 経路3: CBS (硫黄転移) -->
+          <path d="M 640 100 Q 750 180 800 230" fill="none" stroke="#5F2C70" stroke-width="2" marker-end="url(#arrowFlow)"></path>
+          <rect x="730" y="220" width="160" height="70" rx="10" fill="url(#boxNormal)" stroke="#5F2C70" stroke-width="2"></rect>
+          <text x="810" y="245" text-anchor="middle" font-size="13" font-weight="bold" fill="#5F2C70">経路3: CBS経路</text>
+          <text x="810" y="263" text-anchor="middle" font-size="11" fill="#666">硫黄転移でシステインへ</text>
+          <text x="810" y="280" text-anchor="middle" font-size="11" fill="#666">→グルタチオン合成</text>
+
+          <!-- COMTでメチル基消費(下段) -->
+          <rect x="200" y="340" width="540" height="100" rx="10" fill="#fef0d8" stroke="#EF821D" stroke-width="2"></rect>
+          <text x="470" y="365" text-anchor="middle" font-size="14" font-weight="bold" fill="#EF821D">⚠️ COMT酵素によるメチル基の「奪い合い」</text>
+          <text x="470" y="388" text-anchor="middle" font-size="11" fill="#666">COMT(Mg補酵素)はカテコールアミンやエストロゲンのメチル化分解で多量のメチル基を消費</text>
+          <text x="470" y="406" text-anchor="middle" font-size="11" fill="#666">Mg 2.1↓でCOMT機能低下→カテコールアミン蓄積→さらにメチル基を消費</text>
+          <text x="470" y="424" text-anchor="middle" font-size="11" fill="#C0384D" font-weight="bold">→ ホモシステイン再メチル化に回るメチル基が不足</text>
+
+          <line x1="270" y1="190" x2="270" y2="335" stroke="#EF821D" stroke-width="2" stroke-dasharray="3,3"></line>
+        </svg>
+      </div>
+      <p style="font-size: 0.88em; color: #666; text-align: center; margin-top: 12px;">
+        🔴赤い経路 = ボトルネックの可能性 / 🟠オレンジ = COMTによるメチル基競合
+      </p>
+    </div>
+
+    <details class="detail-data">
+      <summary>📚 ホモシステイン処理の3経路 — 詳細解説</summary>
+      <div class="details-content">
+        <p><strong>経路1: メチル化サイクル(葉酸・B12依存性)</strong> — MTHFR酵素が葉酸を活性型(5-MTHF)に変換し、その活性型葉酸がビタミンB12を介してホモシステインにメチル基を供与し、メチオニンへと再生する経路。<strong>MTHFR C677T多型のホモ接合変異(TT型)</strong>では酵素活性が60〜70%低下し、活性型葉酸の産生が著しく制限されます(日本人の約10〜15%に存在)。リボフラビン(B2)が補酵素として不可欠。</p>
+        <p><strong>経路2: BHMT経路(ベタイン依存性)</strong> — 主に肝臓と腎臓で、ベタイン(トリメチルグリシン)をメチル基供与体としてホモシステインをメチオニンに変換。BHMT遺伝子に変異があると代替経路の効率も低下し、<strong>ホモシステイン処理の「二重の障害」</strong>となります。野崎様のBUN 11.1(理想15〜17)はタンパク質代謝効率の低下を示し、ベタイン前駆体のコリン摂取が十分でない可能性を示唆。</p>
+        <p><strong>経路3: CBS経路(硫黄転移)</strong> — シスタチオニンβ-シンターゼ(CBS)を介し、ホモシステインをシステインへ変換、最終的に体内最強の抗酸化物質<strong>グルタチオン</strong>合成に寄与。B6が補酵素。</p>
+        <div class="gene-box">
+          <p><strong>COMT遺伝子</strong>の活性が中間型(Val/Met型)の場合、ストレス時にカテコールアミンが蓄積しやすく、その分解にメチル基が消費されるため、ホモシステイン再メチル化に回すメチル基が相対的に不足する「<strong>メチル基の奪い合い</strong>」が起こり得ます。Mg 2.1の低値(理想2.4〜2.6)はCOMT補酵素の不足を意味し、悪循環を形成。</p>
+        </div>
+        <p><strong>頭痛との関連：</strong>ホモシステインの蓄積は血管内皮細胞を傷害し、一酸化窒素(NO)の産生を低下させ、血管拡張機能を損ないます。脳血管の微小循環障害は頭痛の原因となり得ますし、ホモシステインによる酸化ストレスが神経細胞に直接影響を与えることも知られています。</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== Before/After ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">📏</span>現状値と理想値のギャップ</h2>
+    <div class="tldr-box">
+      <div class="tldr-icon">📍</div>
+      <div class="tldr-content">
+        <div class="tldr-label">VISUAL GAP</div>
+        <div class="tldr-text"><strong>赤いマーカー</strong>が現在地、<strong>緑のゾーン</strong>が精密栄養学的理想範囲です。</div>
+      </div>
+    </div>
+
+    <div class="ba-section">
+
+      <!-- ホモシステイン: 0-20 -->
+      <div class="ba-item">
+        <div class="ba-header">
+          <div class="ba-name">ホモシステイン (nmol/mL)</div>
+          <span class="ba-status" style="background: linear-gradient(135deg, var(--coral), var(--rose));">高値・最重要</span>
+        </div>
+        <div class="ba-bar-wrap">
+          <!-- target 6.5-7.5 on 0-20: left=32.5%, width=5% -->
+          <div class="ba-target-zone" style="left: 32.5%; width: 5%;"></div>
+          <!-- current 15.6 on 0-20: 78% -->
+          <div class="ba-current" style="left: 78%;"></div>
+        </div>
+        <div class="ba-labels">
+          <span>0</span>
+          <span class="ba-target-label">理想 6.5〜7.5</span>
+          <span class="ba-current-label">▲ 現在 15.6</span>
+          <span>20</span>
+        </div>
+      </div>
+
+      <!-- EPA/AA比: 0-1 -->
+      <div class="ba-item">
+        <div class="ba-header">
+          <div class="ba-name">EPA/AA比</div>
+          <span class="ba-status" style="background: linear-gradient(135deg, var(--coral), var(--rose));">炎症体質</span>
+        </div>
+        <div class="ba-bar-wrap">
+          <!-- target 0.5-1.0+ on 0-1: left=50%, width=50% -->
+          <div class="ba-target-zone" style="left: 50%; width: 50%;"></div>
+          <!-- current 0.12: 12% -->
+          <div class="ba-current" style="left: 12%;"></div>
+        </div>
+        <div class="ba-labels">
+          <span>0</span>
+          <span class="ba-current-label">▲ 現在 0.12</span>
+          <span class="ba-target-label">理想 0.5〜1.0</span>
+          <span>1.0</span>
+        </div>
+      </div>
+
+      <!-- ビタミンD -->
+      <div class="ba-item">
+        <div class="ba-header">
+          <div class="ba-name">25-OH ビタミンD (ng/mL)</div>
+          <span class="ba-status" style="background: linear-gradient(135deg, var(--coral), var(--rose));">深刻な欠乏</span>
+        </div>
+        <div class="ba-bar-wrap">
+          <div class="ba-target-zone" style="left: 60%; width: 20%;"></div>
+          <div class="ba-current" style="left: 24.3%;"></div>
+        </div>
+        <div class="ba-labels">
+          <span>0</span>
+          <span class="ba-current-label">▲ 現在 24.3</span>
+          <span class="ba-target-label">理想 60〜80</span>
+          <span>100</span>
+        </div>
+      </div>
+
+      <!-- フェリチン -->
+      <div class="ba-item">
+        <div class="ba-header">
+          <div class="ba-name">フェリチン (ng/mL)</div>
+          <span class="ba-status" style="background: linear-gradient(135deg, var(--orange), var(--yellow-orange));">過剰</span>
+        </div>
+        <div class="ba-bar-wrap">
+          <div class="ba-target-zone" style="left: 25%; width: 12.5%;"></div>
+          <div class="ba-current" style="left: 76.5%;"></div>
+        </div>
+        <div class="ba-labels">
+          <span>0</span>
+          <span class="ba-target-label">理想 100〜150</span>
+          <span class="ba-current-label">▲ 現在 306</span>
+          <span>400</span>
+        </div>
+      </div>
+
+      <!-- LDL -->
+      <div class="ba-item">
+        <div class="ba-header">
+          <div class="ba-name">LDLコレステロール (mg/dL)</div>
+          <span class="ba-status" style="background: linear-gradient(135deg, var(--orange), var(--yellow-orange));">高値</span>
+        </div>
+        <div class="ba-bar-wrap">
+          <div class="ba-target-zone" style="left: 32%; width: 16%;"></div>
+          <div class="ba-current" style="left: 60.8%;"></div>
+        </div>
+        <div class="ba-labels">
+          <span>0</span>
+          <span class="ba-target-label">理想 80〜120</span>
+          <span class="ba-current-label">▲ 現在 152</span>
+          <span>250</span>
+        </div>
+      </div>
+
+      <!-- L/H比: 0-4 -->
+      <div class="ba-item">
+        <div class="ba-header">
+          <div class="ba-name">L/H比 (動脈硬化リスク)</div>
+          <span class="ba-status" style="background: linear-gradient(135deg, var(--orange), var(--yellow-orange));">高リスク</span>
+        </div>
+        <div class="ba-bar-wrap">
+          <!-- target 0.9-1.5 on 0-4: left=22.5%, width=15% -->
+          <div class="ba-target-zone" style="left: 22.5%; width: 15%;"></div>
+          <!-- current 2.38 on 0-4: 59.5% -->
+          <div class="ba-current" style="left: 59.5%;"></div>
+        </div>
+        <div class="ba-labels">
+          <span>0</span>
+          <span class="ba-target-label">理想 0.9〜1.5</span>
+          <span class="ba-current-label">▲ 現在 2.38</span>
+          <span>4.0</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== 病態連鎖 ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🔗</span>体の中で起きている連鎖反応</h2>
+
+    <div class="tldr-box">
+      <div class="tldr-icon">🧩</div>
+      <div class="tldr-content">
+        <div class="tldr-label">MAIN STORY</div>
+        <div class="tldr-text">ホモシステイン蓄積が血管内皮を傷害 → LDL酸化が促進 → 動脈硬化リスク上昇。一方、慢性免疫ストレスがフェリチン高値と機能性鉄欠乏を生み、副腎機能低下・ビタミンD欠乏が代謝全体を底下げする<strong>多層的な構造</strong>です。</div>
+      </div>
+    </div>
+
+    <div class="chain-grid">
+      <div class="chain-node n1">
+        <div class="chain-icon">🧬</div>
+        <div class="chain-label">メチル化機能低下</div>
+        <div class="chain-detail">MTHFR/BHMT<br>ボトルネック</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node n2">
+        <div class="chain-icon">🩸</div>
+        <div class="chain-label">ホモシステイン蓄積</div>
+        <div class="chain-detail">15.6 nmol/mL<br>理想の2倍</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node n3">
+        <div class="chain-icon">⚠️</div>
+        <div class="chain-label">血管内皮傷害</div>
+        <div class="chain-detail">NO産生低下<br>微小循環障害</div>
+      </div>
+    </div>
+    <div class="chain-grid" style="margin-top: 8px;">
+      <div class="chain-node n4">
+        <div class="chain-icon">🫀</div>
+        <div class="chain-label">LDL酸化促進</div>
+        <div class="chain-detail">動脈硬化の起点<br>泡沫細胞形成</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node n5">
+        <div class="chain-icon">🔥</div>
+        <div class="chain-label">慢性炎症の維持</div>
+        <div class="chain-detail">フェリチン↑<br>NLR 3.18↑</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node n1">
+        <div class="chain-icon">😣</div>
+        <div class="chain-label">主訴の発現</div>
+        <div class="chain-detail">頭痛・便秘<br>疲労感</div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">🎯 主訴とメカニズム</h3>
+    <div class="dosha-grid">
+      <div class="dosha-card" style="background: linear-gradient(135deg, var(--coral), var(--rose), var(--magenta));">
+        <h4>😖 頭痛のメカニズム</h4>
+        <p>① <strong>ホモシステインによる血管内皮傷害</strong>とNO産生低下による脳微小循環障害</p>
+        <p>② <strong>マグネシウム不足</strong>による血管攣縮(過度な収縮)</p>
+        <p>③ MAOA低活性体質が関与する場合、<strong>カテコールアミン蓄積</strong>による神経興奮</p>
+      </div>
+      <div class="dosha-card" style="background: linear-gradient(135deg, var(--orange), var(--magenta), var(--purple));">
+        <h4>🚽 便秘のメカニズム(2〜3日に1回)</h4>
+        <p>① <strong>マグネシウム不足</strong>による腸管蠕動運動の低下</p>
+        <p>② ビタミンD不足による <strong>腸管免疫と粘膜機能</strong>の低下</p>
+        <p>③ <strong>ヴァータ増悪</strong>による腸管の乾燥・不規則な蠕動(便質はバナナ状で良好)</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 主要血液検査詳細 ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🔬</span>血液検査の詳細分析</h2>
+    <div class="tldr-box">
+      <div class="tldr-icon">🧪</div>
+      <div class="tldr-content">
+        <div class="tldr-label">DETAILED ANALYSIS</div>
+        <div class="tldr-text">主要マーカーの一覧と、システム別の詳細解説です。詳細はクリックで展開できます。</div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">📋 主要マーカー一覧</h3>
+    <div class="table-wrapper">
+      <table class="score-table">
+        <thead>
+          <tr><th>項目</th><th>測定値</th><th>精密栄養学的理想値</th><th>評価</th></tr>
+        </thead>
+        <tbody>
+          <tr class="row-bad"><td>ホモシステイン</td><td class="value-bad">15.6 nmol/mL</td><td>6.5〜7.5</td><td><span class="badge badge-bad">高値・最重要</span></td></tr>
+          <tr class="row-bad"><td>EPA/AA比</td><td class="value-bad">0.12</td><td>0.5以上</td><td><span class="badge badge-bad">炎症体質</span></td></tr>
+          <tr class="row-bad"><td>25-OH ビタミンD</td><td class="value-bad">24.3 ng/mL</td><td>60〜80</td><td><span class="badge badge-bad">深刻欠乏</span></td></tr>
+          <tr class="row-bad"><td>フェリチン</td><td class="value-bad">306 ng/mL</td><td>100〜150</td><td><span class="badge badge-bad">高値</span></td></tr>
+          <tr class="row-bad"><td>CK(クレアチンキナーゼ)</td><td class="value-bad">993 U/L</td><td>80〜120</td><td><span class="badge badge-bad">著明高値</span></td></tr>
+          <tr class="row-bad"><td>コルチゾール</td><td class="value-bad">3.5 μg/dL</td><td>4〜6</td><td><span class="badge badge-bad">低値</span></td></tr>
+          <tr class="row-warn"><td>ACTH</td><td class="value-warn">4.3 pg/mL</td><td>7〜30</td><td><span class="badge badge-warn">低値</span></td></tr>
+          <tr class="row-warn"><td>血清鉄</td><td class="value-warn">75 μg/dL</td><td>100〜120</td><td><span class="badge badge-warn">機能性鉄欠乏</span></td></tr>
+          <tr class="row-warn"><td>マグネシウム</td><td class="value-warn">2.1 mg/dL</td><td>2.4〜2.6</td><td><span class="badge badge-warn">低値</span></td></tr>
+          <tr class="row-warn"><td>LDLコレステロール</td><td class="value-warn">152 mg/dL</td><td>80〜120</td><td><span class="badge badge-warn">高値</span></td></tr>
+          <tr class="row-warn"><td>HDLコレステロール</td><td class="value-warn">64 mg/dL</td><td>70〜100</td><td><span class="badge badge-warn">低値</span></td></tr>
+          <tr class="row-warn"><td>L/H比</td><td class="value-warn">2.38</td><td>0.9〜1.5</td><td><span class="badge badge-warn">高リスク</span></td></tr>
+          <tr class="row-warn"><td>NLR(好中球/リンパ球比)</td><td class="value-warn">3.18</td><td>≤1.5</td><td><span class="badge badge-warn">免疫ストレス</span></td></tr>
+          <tr class="row-warn"><td>単球</td><td class="value-warn">5.2 %</td><td>2〜4</td><td><span class="badge badge-warn">高値</span></td></tr>
+          <tr class="row-warn"><td>BUN(尿素窒素)</td><td class="value-warn">11.1 mg/dL</td><td>15〜17</td><td><span class="badge badge-warn">低値</span></td></tr>
+          <tr class="row-warn"><td>HbA1c</td><td class="value-warn">5.5 %</td><td>5.0〜5.3</td><td><span class="badge badge-warn">やや高値</span></td></tr>
+          <tr class="row-warn"><td>eGFR(creat)</td><td class="value-warn">68.8</td><td>90〜120</td><td><span class="badge badge-warn">CK由来の影響可能性</span></td></tr>
+          <tr class="row-good"><td>HOMA-IR</td><td class="value-good">0.59</td><td>≤1.6</td><td><span class="badge badge-good">良好</span></td></tr>
+          <tr class="row-good"><td>TSH</td><td class="value-good">0.88 μIU/mL</td><td>0.5〜2</td><td><span class="badge badge-good">良好</span></td></tr>
+          <tr class="row-good"><td>テストステロン</td><td class="value-good">11.20 ng/mL</td><td>男性正常範囲</td><td><span class="badge badge-good">良好</span></td></tr>
+          <tr class="row-good"><td>DHEA-S</td><td class="value-good">2559 ng/mL</td><td>良好範囲</td><td><span class="badge badge-good">良好</span></td></tr>
+          <tr class="row-good"><td>CRP(高感度)</td><td class="value-good">0.016 mg/dL</td><td>0〜0.05</td><td><span class="badge badge-good">急性炎症なし</span></td></tr>
+          <tr class="row-good"><td>PSA</td><td class="value-good">0.245 ng/mL</td><td>低値良好</td><td><span class="badge badge-good">前立腺良好</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="section-subtitle">📚 システム別詳細解説(クリックで展開)</h3>
+
+    <details class="detail-data">
+      <summary>🧬 ホモシステイン代謝とメチレーション回路 — 最重要</summary>
+      <div class="details-content">
+        <p>ホモシステイン<strong>15.6 nmol/mL</strong>は精密栄養学的最適値(6.5〜7.5 μmol/L)の約2倍以上。ホモシステインはメチオニンが体内でメチル基を放出した後の中間代謝産物で、3つの経路でリサイクルまたは処理されます(MTHFR経路 / BHMT経路 / CBS経路)。野崎様の高値は、これらいずれかまたは複数のステップに滞りがあることを意味します。</p>
+        <div class="gene-box">
+          <p>血液検査の結果から推察される遺伝子傾向として、<strong>MTHFR遺伝子(特にC677T多型)</strong>の効率が体質的に低い可能性。TT型ホモ接合変異では酵素活性が60〜70%低下し、活性型葉酸(5-MTHF)産生が制限されます。<strong>BHMT遺伝子変異</strong>が加わると代替経路の効率も低下し、二重の障害となります。BUN 11.1の低値はタンパク質代謝効率の低下→ベタイン前駆体コリンの不足を示唆。</p>
+        </div>
+        <p><strong>頭痛との関連：</strong>ホモシステインの蓄積は血管内皮細胞を傷害し、一酸化窒素(NO)産生低下、血管拡張機能低下を引き起こします。脳血管の微小循環障害は頭痛の原因となり、酸化ストレスが神経細胞に直接影響することも知られています。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🔥 フェリチン高値と機能性鉄欠乏</summary>
+      <div class="details-content">
+        <p>フェリチン<strong>306 ng/mL</strong>は理想値(100〜150)の約2倍。一方、血清鉄<strong>75 μg/dL</strong>(理想100〜120)は低値。これは鉄がフェリチン中に封じ込められ利用できない<strong>「機能性鉄欠乏」</strong>を示唆します。</p>
+        <p>CRP 0.016は良好ですが、<strong>NLR 3.18・単球5.2%</strong>はCRPに反映されにくい「くすぶり型」の慢性免疫ストレスの存在を示唆。慢性炎症下では肝臓産生の<strong>ヘプシジン</strong>が亢進し、腸管からの鉄吸収をブロックすると同時にマクロファージ内の鉄を封じ込めます。</p>
+        <p>原因候補：①CK 993に象徴される筋組織損傷に伴う局所炎症、②腸管慢性炎症(便秘による腸内環境悪化)、③ホモシステインによる血管内皮の持続的傷害。</p>
+        <p><strong>解決策：</strong>鉄補給は禁忌。抗炎症戦略(オメガ3、抗炎症食)と筋損傷の特定・対処を優先。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🫀 脂質代謝の分析</summary>
+      <div class="details-content">
+        <p>LDL <strong>152 mg/dL</strong>(理想80〜120)、総コレステロール<strong>226</strong>(理想180〜220)と高値、HDL <strong>64 mg/dL</strong>(理想70〜100)は低値。<strong>L/H比 2.38</strong>(理想0.9〜1.5)は動脈硬化リスク高い水準。一方、中性脂肪<strong>58 mg/dL</strong>は理想値より低めで、「LDL高値+中性脂肪低値」は糖質・脂質過多型とは異なる機序を示唆。</p>
+        <div class="gene-box">
+          <p>血液検査の結果から推察される遺伝子傾向として、<strong>ACAT遺伝子</strong>(アセチルCoAアセチルトランスフェラーゼ)の働きが体質的に低い可能性。ACAT1は遊離コレステロールをエステル化し貯蔵する酵素で、効率が低いと遊離コレステロールが血中に滞留しやすくなります。</p>
+        </div>
+        <p><strong>ホモシステインとの相乗リスク：</strong>高ホモシステイン血症は血管内皮を傷害し、LDLの酸化変性を促進。酸化LDLはマクロファージに取り込まれ泡沫細胞を形成、動脈硬化の起点となります。<strong>ホモシステイン↑ × LDL↑ = 動脈硬化リスクの相乗増加</strong>。</p>
+        <p>リポ蛋白(a) 6.8(低値)は好材料ですが、<strong>EPA/AA比 0.12</strong>の極端な低値は抗炎症性脂肪酸バランスの著しい崩れを示唆。AA 226.6に対してEPA 27.5と、炎症促進系のオメガ6が圧倒的優勢。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🩸 副腎機能と神経伝達物質バランス</summary>
+      <div class="details-content">
+        <p>コルチゾール<strong>3.5 μg/dL</strong>(理想4〜6)、ACTH <strong>4.3 pg/mL</strong>と低値で、HPA軸機能低下を示唆。副腎疲労の初期〜中期段階の可能性。慢性ストレス負荷の蓄積で初期高コルチゾール期を経て現在「疲憊期」に入りつつある可能性が考えられます。</p>
+        <p>コルチゾール低値では血糖の安定維持が難しく、空腹時・食間に頭痛、集中力低下、倦怠感が出やすくなります。HbA1c 5.5%(理想5.0〜5.3%)とやや高めは、食後血糖スパイクを示唆。</p>
+        <div class="gene-box">
+          <p>血液検査の結果から推察される遺伝子傾向として、<strong>MAOA遺伝子</strong>の活性が低い体質である可能性。MAOAはセロトニン、ドーパミン、ノルエピネフリンを分解する酵素で、低活性型ではモノアミン神経伝達物質の分解速度が遅くなり、ストレス感受性が高まり頭痛を引き起こしやすくなります。</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>☀️ ビタミンD・マグネシウム・骨代謝</summary>
+      <div class="details-content">
+        <p>25-OHビタミンD <strong>24.3 ng/mL</strong>は理想値(60〜80)の約3分の1。一般基準値(30以上)すら下回る<strong>極めて深刻な欠乏</strong>です。ビタミンDは免疫調節、遺伝子発現制御、炎症抑制、筋肉機能維持、精神安定にまで関わるホルモン様物質。</p>
+        <p>マグネシウム<strong>2.1 mg/dL</strong>はビタミンDの活性化(肝25位水酸化、腎1α水酸化)の補酵素であり、不足するとビタミンD活性化が阻害される<strong>悪循環</strong>を形成。Mgは300種以上の酵素反応に関与し、ATP安定化、筋弛緩、神経興奮抑制に不可欠。頭痛の原因として、Mg不足による血管攣縮も関与しうる。</p>
+        <div class="gene-box">
+          <p>血液検査の結果から推察される遺伝子傾向として、<strong>VDR遺伝子(Taq1、Fok1多型)</strong>の効率が体質的に低い可能性。同じ血中ビタミンD濃度でも細胞レベルでの効果が減弱する場合、より積極的な補給が必要となります。</p>
+        </div>
+        <p>カルシウム9.2、ホールPTH 43.2で骨代謝に急を要する問題はないものの、ビタミンD欠乏長期化は二次性副甲状腺機能亢進症リスクとなります。無機リン3.0のやや低めもVD欠乏の影響を示唆。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>⚔️ 白血球分画と免疫バランス</summary>
+      <div class="details-content">
+        <p>白血球数5700/μL(理想内)ですが、好中球<strong>70.6%</strong>(理想55〜60%)が高く、リンパ球<strong>22.2%</strong>(理想35〜40%)が低い。<strong>NLR 3.18</strong>(理想1.5)は身体が「常に臨戦態勢」にある慢性ストレス応答を反映。コルチゾールはリンパ球アポトーシスを促進し好中球を末梢に動員するため、過去に長期間高コルチゾール状態が続いた「名残」として好中球優位パターンが残存している可能性。</p>
+        <p>単球<strong>5.2%</strong>(理想2〜4%)はマクロファージ前駆体で、組織での慢性的な修復・炎症反応を示唆。CK 993の筋損傷や高ホモシステインによる血管内皮傷害への反応として動員されている可能性があります。好酸球1.7%、好塩基球0.3%はアレルギーや寄生虫所見なし。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🍽️ 消化吸収機能・タンパク質代謝</summary>
+      <div class="details-content">
+        <p>ペプシノーゲンI <strong>69.7 ng/mL</strong>(理想50〜60)、PGI/II比6.3(理想5.0以上)、H.ピロリ抗体陰性で、胃酸分泌は活発・胃粘膜萎縮なし=<strong>胃機能は健全</strong>。</p>
+        <p>一方、BUN <strong>11.1 mg/dL</strong>(理想15〜17)の低値は、タンパク質摂取不足、または摂取しても消化・吸収・代謝過程で十分利用されていない可能性。朝食はバナナ1本+コーヒー中心でタンパク質ほぼゼロ。78kgの男性に必要な94〜117g/日には届いていない可能性が高い。</p>
+        <p>コリンエステラーゼ273(理想280〜320)はわずか低値で肝臓のタンパク質合成能力にやや低下の可能性。アルブミン4.6は下限近く。<strong>A/G比 1.6</strong>(理想1.8〜2.0)は低値で、グロブリン分画相対高値=免疫系慢性活性化を間接反映。</p>
+        <p><strong>便秘(2〜3日に1回)</strong>：マグネシウム不足、ビタミンD不足、カパ・ヴァータ体質(ヴァータ増悪)が複合的に関与。便質はブリストルスケール3〜4(バナナ状)で良好だが、頻度が問題。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🦋 甲状腺・糖代謝・ホルモン</summary>
+      <div class="details-content">
+        <p><strong>甲状腺：</strong>TSH 0.88、FT3 3.11、FT4 1.45で機能は良好。FT3がやや低めなのは、5'-デイオジナーゼ酵素によるT4→T3変換効率を反映。鉄75低値が変換に影響している可能性。<strong>セレン未測定</strong>のため次回測定推奨。</p>
+        <p><strong>糖代謝：</strong>血糖85、空腹時インスリン2.8、HOMA-IR 0.59と<strong>極めて良好</strong>。HbA1c 5.5%、グリコアルブミン14.6%とやや高めは食後血糖変動を示唆。1.5AG 18.6は理想内で著しい食後高血糖の持続なし。</p>
+        <p><strong>男性ホルモン：</strong>テストステロン11.20、遊離テストステロン22.7、DHEA-S 2559と45歳男性として<strong>良好な水準</strong>。LH 6.9、FSH 6.7、プロラクチン7.9、PSA 0.245も良好。フィンペシア服用下でも顕著なホルモン乱れは認められず。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🟡 ビリルビンと解毒機能</summary>
+      <div class="details-content">
+        <p>総ビリルビン<strong>0.9</strong>(理想0.2〜0.8)、直接ビリルビン<strong>0.3</strong>とわずかに高値。間接ビリルビン0.6は上限。可能性として①<strong>ジルベール症候群</strong>(UGT1A1の活性低下、日本人の約5〜10%にみられる良性体質)、②赤血球の軽度溶血。赤血球数508、Hb 15.3、Ht 46.1%と赤血球系は理想値上限〜やや高値で、軽度の多血傾向と赤血球ターンオーバー亢進の可能性も。</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== Quick Win ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🚀</span>今日から始める3つのこと</h2>
+    <div class="quickwin-banner">
+      <div class="quickwin-icon">⚡</div>
+      <div class="quickwin-content">
+        <div class="quickwin-label">QUICK WIN</div>
+        <div class="quickwin-title">まずはこの3つだけで結構です</div>
+        <div class="quickwin-items">
+          <span class="quickwin-item">🥚 朝食にゆで卵 + しじみ味噌汁</span>
+          <span class="quickwin-item">🐟 青魚を週3回</span>
+          <span class="quickwin-item">🥜 アーモンドひとつかみ/日</span>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: 0.95em; color: #555; margin-top: 14px;">
+      小さな習慣の積み重ねが約37兆個の細胞の働きを少しずつ改善し、<strong>3か月後・6か月後の血液検査データに確かな変化</strong>として表れます。野崎様は土台が強固。正しいアプローチを実践すれば、身体は必ず応えてくれます。
+    </p>
+  </section>
+
+  <!-- ===== 食事プラン ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🍽️</span>食事・栄養素の改善プラン</h2>
+
+    <div class="tldr-box">
+      <div class="tldr-icon">🎯</div>
+      <div class="tldr-content">
+        <div class="tldr-label">FOOD STRATEGY</div>
+        <div class="tldr-text"><strong>3つの柱</strong> = ① メチル化サポート(活性型葉酸・B群・ベタイン・コリン) ② 抗炎症脂質バランス改善(オメガ3で EPA/AA 比向上) ③ ビタミンD・Mgの底上げ。タンパク質量を 1日 94〜117g(体重×1.2〜1.5g)へ増量。</div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">🍱 推奨食材マップ</h3>
+    <div class="food-grid">
+      <div class="food-card">
+        <div class="food-card-header">🧬 メチル化サポート</div>
+        <div class="food-card-body">
+          <ul>
+            <li>ほうれん草・ブロッコリー</li>
+            <li>枝豆・アスパラガス</li>
+            <li>レバー(葉酸・B12)</li>
+            <li>卵黄(コリン約300mg/2個)</li>
+            <li>ビーツ(ベタイン)</li>
+            <li>納豆・アーモンド(B2)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-card-header">🐟 オメガ3強化</div>
+        <div class="food-card-body">
+          <ul>
+            <li>サバ缶(EPA1300+DHA1600mg)</li>
+            <li>イワシ・アジ・サンマ</li>
+            <li>鮭(VD1000IU+EPA)</li>
+            <li>サバ塩焼きパック</li>
+            <li>焼きサバおにぎり</li>
+            <li>フィッシュオイル2g/日</li>
+          </ul>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-card-header">☀️ ビタミンD・Mg</div>
+        <div class="food-card-body">
+          <ul>
+            <li>鮭・サバ・きくらげ</li>
+            <li>卵黄・しいたけ</li>
+            <li>アーモンド(Mg 27mg/10粒)</li>
+            <li>カシューナッツ・アボカド</li>
+            <li>黒豆・バナナ</li>
+            <li>エプソムソルト入浴</li>
+          </ul>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-card-header">🌾 食物繊維・抗炎症</div>
+        <div class="food-card-body">
+          <ul>
+            <li>もち麦ごはん(白米2-3割)</li>
+            <li>もずく・わかめ・昆布</li>
+            <li>こんにゃく・オクラ</li>
+            <li>キウイ(2.5g食物繊維)</li>
+            <li>ターメリック・ジンジャー</li>
+            <li>ブルーベリー</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">💊 サプリメント補給戦略(クリックで詳細)</h3>
+
+    <details class="detail-data">
+      <summary>🧬 メチル化サポート群(最重要)</summary>
+      <div class="details-content">
+        <p><strong>活性型葉酸(5-MTHF/メチルフォレート)</strong>：MTHFR効率低下の可能性を考慮し、合成葉酸より活性型を選択。</p>
+        <p><strong>ビタミンB12(メチルコバラミン or ヒドロキシコバラミン)</strong>：MTR(メチオニン合成酵素)補酵素として、活性型葉酸からホモシステインへのメチル基受け渡しに不可欠。</p>
+        <p><strong>ビタミンB2(リボフラビン)</strong>：MTHFR酵素の直接補酵素。</p>
+        <p><strong>ビタミンB6(ピリドキシン)</strong>：CBS経路でホモシステイン→システイン変換に必要。</p>
+        <p><strong>ベタイン(トリメチルグリシン)・コリン</strong>：BHMT経路の基質。卵2個で約300mgのコリン摂取。</p>
+        <div class="alert-box">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-text"><strong>COMT遺伝子の活性が中間型または低い場合</strong>、高用量メチル供与体(SAMe・高用量メチルフォレート)は過敏性や不安を引き起こす可能性。<strong>少量から始めて徐々に増量</strong>することが重要です。</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🐟 オメガ3脂肪酸 EPA+DHA 2g/日</summary>
+      <div class="details-content">
+        <p>EPA/AA比0.12の改善が最優先。サバ・イワシ・アジ・サンマを<strong>週3〜4回、1食100g程度</strong>。サバ水煮缶1缶でEPA約1300mg+DHA約1600mg摂取可能。フィッシュオイルサプリ1日2g程度も有効。同時に<strong>オメガ6系(サラダ油、大豆油、コーン油、マーガリン、外食揚げ物)を意識的に減らす</strong>こと。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>☀️ ビタミンD3 4000〜5000 IU/日</summary>
+      <div class="details-content">
+        <p>24.3 ng/mLからの改善は食事だけでは困難。サプリメントで主治医相談の上、<strong>1日 4000〜5000 IU のビタミンD3</strong>を脂質を含む食事と一緒に摂取。VDR遺伝子効率が低い可能性も考慮し、より積極的な補給が必要な場合あり。腕と顔を出した状態で15〜20分(午前10時〜午後2時)の<strong>日光浴</strong>を毎日心がけること。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🥜 マグネシウム 400mg/日</summary>
+      <div class="details-content">
+        <p>2.1から2.4〜2.6への改善目標。吸収効率の高い<strong>グリシン酸マグネシウム or クエン酸マグネシウム</strong>を1日400mg。<strong>夜の摂取</strong>で筋弛緩・神経鎮静作用により睡眠の質向上、便秘改善にも寄与。エプソムソルト入浴で経皮吸収も補助。</p>
+      </div>
+    </details>
+
+    <details class="detail-data">
+      <summary>🩸 副腎サポート(ビタミンC・パントテン酸)</summary>
+      <div class="details-content">
+        <p><strong>ビタミンC 1000〜3000mg/日(分割摂取)</strong>：副腎は体内で最もビタミンC濃度が高い臓器でコルチゾール合成に不可欠。<strong>パントテン酸(B5) 500mg/日</strong>：コルチゾール合成の直接補酵素。<strong>アシュワガンダ 300〜600mg/日</strong>：副腎機能正常化のエビデンスが豊富。ただし甲状腺への影響報告もあるため、甲状腺数値を確認しながらの使用が望ましい。</p>
+      </div>
+    </details>
+
+    <div class="alert-box">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-text">
+        <strong>鉄サプリメントは絶対に避けてください。</strong>フェリチン306の状態での鉄補給は禁忌で、酸化ストレスを助長します。フェリチン適正化により、封じ込められていた鉄が利用可能になり、血清鉄も改善する可能性があります。
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 生活習慣 ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">⏰</span>1日の理想的なリズム</h2>
+
+    <div class="tldr-box">
+      <div class="tldr-icon">🕐</div>
+      <div class="tldr-content">
+        <div class="tldr-label">DAILY RHYTHM</div>
+        <div class="tldr-text"><strong>21時就寝・7〜8時間睡眠を継続</strong>、コルチゾール3.5の状態では<strong>高強度運動を避け中強度有酸素運動</strong>(週3〜4回30分)、<strong>食べる順番</strong>(野菜→タンパク→脂質→炭水化物)で食後血糖スパイク予防。</div>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">06:00</div>
+        <div class="timeline-icon">☀️</div>
+        <div class="timeline-action">起床後コップ1杯の白湯。15〜20分の日光浴(VD合成・概日リズム調整)</div>
+        <div class="timeline-effect effect-morning">VD合成・リズム調整</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">07:00</div>
+        <div class="timeline-icon">🥚</div>
+        <div class="timeline-action">朝食：ゆで卵2個 + しじみ味噌汁 + バナナ半分(B12・コリン・タンパク質)</div>
+        <div class="timeline-effect effect-morning">メチル化サポート</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">12:00</div>
+        <div class="timeline-icon">🐟</div>
+        <div class="timeline-action">昼食：サバ塩焼き定食 or サラダチキン+ほうれん草おひたし</div>
+        <div class="timeline-effect effect-noon">EPA・葉酸補給</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">12:30</div>
+        <div class="timeline-icon">🚶</div>
+        <div class="timeline-action">食後10〜15分の軽い散歩(食後血糖スパイク抑制)</div>
+        <div class="timeline-effect effect-afternoon">血糖安定化</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">14:00〜</div>
+        <div class="timeline-icon">☕</div>
+        <div class="timeline-action">カフェイン摂取の停止。水(2L/日目標)・ハーブティーへ</div>
+        <div class="timeline-effect effect-stop">副腎保護</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">19:00</div>
+        <div class="timeline-icon">🍣</div>
+        <div class="timeline-action">夕食：青魚 + ほうれん草おひたし + もずく + もち麦ごはん少量</div>
+        <div class="timeline-effect effect-evening">抗炎症・葉酸</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">21:00</div>
+        <div class="timeline-icon">🌙</div>
+        <div class="timeline-action">就寝前：マグネシウム400mg + ゴマ油アビヤンガ(ヴァータ鎮静) + 深呼吸10分</div>
+        <div class="timeline-effect effect-night">ヴァータ鎮静</div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">🏃 運動と筋肉の回復</h3>
+    <div class="alert-box">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-text">
+        <strong>CK 993 U/Lに関する注意：</strong>採血前48〜72時間以内に高強度運動(バーベル・スクワット、デッドリフト、長距離ランニング、登山等)を行っていないか確認を。日常的にこの水準であれば、<strong>横紋筋融解症等の可能性も含めて主治医相談を推奨</strong>。コルチゾール3.5の状態では<strong>高強度運動はかえって副腎に負担</strong>。「息が弾むが会話はできる」程度の中強度有酸素運動を週3〜4回30分。
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">🌬 アーユルヴェーダ(カパ・ヴァータ体質への配慮)</h3>
+    <div class="dosha-grid">
+      <div class="dosha-card" style="background: linear-gradient(135deg, var(--blue), var(--purple), var(--dark-purple));">
+        <h4>🌬 ヴァータ鎮静の生活術</h4>
+        <p>ヴァータ増悪が便秘・頭痛・睡眠の質低下の原因。<strong>規則正しい生活リズム</strong>(食事・睡眠・排泄を一定時間)、温かい食事と飲み物(冷たいものを避ける)を心がけてください。</p>
+        <p><strong>ゴマ油アビヤンガ</strong>(自己マッサージ)：入浴前に温めたゴマ油を全身に塗布、10分ほど置いて入浴。神経系鎮静と皮膚保湿に効果的。</p>
+      </div>
+      <div class="dosha-card" style="background: linear-gradient(135deg, var(--green), var(--light-green), var(--blue));">
+        <h4>🚽 便秘改善の複合アプローチ</h4>
+        <p><strong>マグネシウム補給</strong>：腸管に水分を引き込む浸透圧効果。グリシン酸マグネシウム400mg(夜)。</p>
+        <p><strong>食物繊維25g/日</strong>：もち麦ごはん、キウイ1個/日、おくら味噌汁、ひじき煮物。</p>
+        <p><strong>水分2.3L/日</strong>(体重78×30mL)。朝の白湯1杯はアーユルヴェーダ的にもアグニ(消化力)を整える。</p>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">✅ 今週から取り組むチェックリスト</h3>
+    <div class="checklist-grid">
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">朝食にゆで卵2個+しじみ味噌汁を追加</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">青魚メニューを週3〜4回</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">アーモンドひとつかみ/日(10〜15粒)</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">就寝前にマグネシウム400mg</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">ビタミンD3 4000〜5000IU/日</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">午後14時以降のカフェイン中止</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">食後10〜15分の散歩</div></div>
+      <div class="checklist-item"><div class="checkbox"></div><div class="checklist-text">食べる順番(野菜→蛋白→炭水)を徹底</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 課題ロードマップ ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🎯</span>主要課題と解決ロードマップ</h2>
+
+    <div class="issue-block">
+      <div class="issue-header">
+        <div class="issue-title">🧬 課題1：ホモシステイン蓄積の解消</div>
+        <span class="issue-priority">最優先</span>
+      </div>
+      <div class="issue-content">
+        メチル化回路の各ステップを栄養的に丁寧にサポート。COMT中間型・低活性の可能性を考慮し、<strong>少量から始めて徐々に増量</strong>。3〜6か月後にホモシステイン再測定。
+        <div class="issue-actions">
+          <div class="issue-action"><span class="a-icon">✓</span>活性型葉酸(5-MTHF)</div>
+          <div class="issue-action"><span class="a-icon">✓</span>ビタミンB12(メチルコバラミン)</div>
+          <div class="issue-action"><span class="a-icon">✓</span>B2(リボフラビン)・B6</div>
+          <div class="issue-action"><span class="a-icon">✓</span>ベタイン・コリン(卵黄)</div>
+          <div class="issue-action"><span class="a-icon">✓</span>マグネシウム400mg/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>3〜6か月後 再測定</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-block">
+      <div class="issue-header">
+        <div class="issue-title">🐟 課題2：EPA/AA比改善・抗炎症体質への転換</div>
+        <span class="issue-priority">最優先</span>
+      </div>
+      <div class="issue-content">
+        EPA/AA 0.12は炎症体質の象徴。オメガ3を増やし、オメガ6(揚げ物・サラダ油)を意識的に減らす<strong>両側からのアプローチ</strong>。
+        <div class="issue-actions">
+          <div class="issue-action"><span class="a-icon">✓</span>青魚 週3〜4回(100g/食)</div>
+          <div class="issue-action"><span class="a-icon">✓</span>EPA/DHA サプリ2g/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>外食の揚げ物制限</div>
+          <div class="issue-action"><span class="a-icon">✓</span>焼き魚定食・刺身定食を選択</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-block">
+      <div class="issue-header">
+        <div class="issue-title">🔥 課題3：機能性鉄欠乏と慢性免疫ストレスの是正</div>
+        <span class="issue-priority mid">高優先</span>
+      </div>
+      <div class="issue-content">
+        <strong>鉄サプリ禁忌</strong>。抗炎症戦略でフェリチン適正化→鉄利用効率の改善を狙う。
+        <div class="issue-actions">
+          <div class="issue-action"><span class="a-icon">✓</span>オメガ3 2g/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>クルクミン500mg/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>抗炎症食パターン</div>
+          <div class="issue-action"><span class="a-icon">✓</span>CK再検査でフェリチン経過確認</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-block">
+      <div class="issue-header">
+        <div class="issue-title">🩸 課題4：副腎機能の回復(コルチゾール正常化)</div>
+        <span class="issue-priority mid">高優先</span>
+      </div>
+      <div class="issue-content">
+        コルチゾール3.5・ACTH 4.3は HPA軸機能低下を示唆。栄養と生活習慣の両面から段階的に回復を。
+        <div class="issue-actions">
+          <div class="issue-action"><span class="a-icon">✓</span>ビタミンC 1000〜3000mg/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>パントテン酸 500mg/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>21時就寝・7-8時間睡眠継続</div>
+          <div class="issue-action"><span class="a-icon">✓</span>朝の日光浴・夕方リラックス</div>
+          <div class="issue-action"><span class="a-icon">✓</span>アシュワガンダ300-600mg検討</div>
+          <div class="issue-action"><span class="a-icon">✓</span>高強度運動の回避</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-block">
+      <div class="issue-header">
+        <div class="issue-title">☀️ 課題5：ビタミンD・マグネシウムの底上げ</div>
+        <span class="issue-priority mid">高優先</span>
+      </div>
+      <div class="issue-content">
+        VD・Mgは互いに代謝補助関係。同時改善で相乗効果。
+        <div class="issue-actions">
+          <div class="issue-action"><span class="a-icon">✓</span>D3 4000-5000IU/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>Mg 400mg/日(夜)</div>
+          <div class="issue-action"><span class="a-icon">✓</span>日光浴 15-20分/日</div>
+          <div class="issue-action"><span class="a-icon">✓</span>エプソムソルト入浴</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-block">
+      <div class="issue-header">
+        <div class="issue-title">💊 課題6：フィンペシア服用に伴う注意点</div>
+        <span class="issue-priority low">継続観察</span>
+      </div>
+      <div class="issue-content">
+        現状のテストステロン11.20、遊離テストステロン22.7は良好で、薬剤による顕著なホルモン乱れは認められず。長期服用で稀に報告される副作用(気分変動、性機能変化)に注意し、定期的なホルモン検査継続が望ましい。
+        <div class="issue-actions">
+          <div class="issue-action"><span class="a-icon">✓</span>テストステロン定期測定</div>
+          <div class="issue-action"><span class="a-icon">✓</span>気分・性機能の変化観察</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-subtitle">🔬 次回検査で追加測定を推奨する項目</h3>
+    <div class="food-grid">
+      <div class="food-card">
+        <div class="food-card-header">🧬 ホモシステイン再測定</div>
+        <div class="food-card-body">
+          <ul>
+            <li>3〜6か月後の改善度確認</li>
+            <li>今回15.6を基準線に</li>
+          </ul>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-card-header">💊 B12 + 尿中MMA</div>
+        <div class="food-card-body">
+          <ul>
+            <li>B12機能的充足度評価</li>
+            <li>メチルマロン酸で精査</li>
+          </ul>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-card-header">🦋 セレン・血清葉酸</div>
+        <div class="food-card-body">
+          <ul>
+            <li>T4→T3変換評価</li>
+            <li>葉酸状態の把握</li>
+          </ul>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-card-header">⚖️ 蛋白分画詳細</div>
+        <div class="food-card-body">
+          <ul>
+            <li>A/G比1.6の精査</li>
+            <li>α1〜γの各分画測定</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== おわりに ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">🌅</span>おわりに</h2>
+    <div class="highlight">
+      <p>野崎様の血液検査データを精密栄養学のフレームワークで読み解いた結果、いくつかの明確な改善ポイントが浮かび上がりました。ホモシステイン高値、ビタミンDとマグネシウム不足、慢性免疫ストレスに伴う機能性鉄欠乏、EPA/AA比低下、副腎機能の低下。これらは複雑に見えても、分子レベルでメカニズムを紐解くと<strong>共通する「根っこ」</strong>が見えてきます。</p>
+      <p><strong>3つの柱</strong> = ① メチル化回路サポート(活性型葉酸、B群、ベタイン、コリン) ② 良質な脂肪酸(オメガ3) ③ ビタミンDとマグネシウムの底上げ。これだけでホモシステイン代謝改善、免疫バランス正常化、脂質プロファイル改善、頭痛軽減、便秘改善など、多くの課題が同時に好転する可能性があります。</p>
+      <p>すべてを一度に完璧に実行する必要はありません。まずは<strong>朝食にゆで卵としじみ味噌汁を追加・アーモンド1日ひとつかみ・青魚を週3回・寝る前にマグネシウム</strong>。こうした小さな習慣の積み重ねが、約37兆個の細胞一つ一つの働きを少しずつ改善し、3か月後・6か月後の血液検査データに確かな変化として表れます。</p>
+      <p>野崎様は<strong>糖代謝の土台(HOMA-IR 0.59)が非常にしっかりしており、甲状腺機能・男性ホルモンも良好</strong>です。改善すべきポイントが明確で、土台が強固であるため、正しいアプローチで身体は必ず応えてくれます。どうぞ焦らず、一歩一歩、ご自身のペースで取り組んでいただければと思います。</p>
+    </div>
+  </section>
+
+  <!-- ===== ダウンロードCTA ===== -->
+  <section class="section" style="background: linear-gradient(180deg, #fafafa, #f5f0f5);">
+    <div class="inline-download">
+      <h4>📥 このレポートを保存する</h4>
+      <p>本レポートをローカルに保存してご活用ください。HTMLファイルはオフラインでも完全に動作し、いつでも閲覧可能です。</p>
+      <div class="dl-buttons">
+        <button class="dl-btn" onclick="downloadHTML()">
+          <span class="dl-icon">📄</span>
+          <span>HTMLでダウンロード</span>
+        </button>
+        <button class="dl-btn secondary" onclick="window.print()">
+          <span class="dl-icon">🖨️</span>
+          <span>PDFとして保存</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 注意事項 ===== -->
+  <section class="section">
+    <h2 class="section-title"><span class="icon">📝</span>解析結果に関する注意事項</h2>
+    <div class="footer-note">
+      <p>本テキストはご提出いただいたデータをもとに、神宮前統合医療クリニック監修のAI解析および株式会社CREDOの精密栄養学プロトコルに基づいて作成され、健康維持の参考情報として提供しています。</p>
+      <p>本テキストは、あくまで解析の結果を表示するものです。表示する情報については、その一般性、確実性、正確性、有用性、完全性を保証するものではなく、ユーザーの健康状態を保証するものでもありません。</p>
+      <p>本テキストは、医学的診断、疾病等の予防、治療方針の決定等を目的としたものではありません。病気や疾病等については、必ずかかりつけの医師などの医療専門職にご相談ください。</p>
+      <p>本テキストには誤記が生じる場合があります。お気づきの点がございましたら、株式会社CREDOまでご連絡ください。</p>
+    </div>
+  </section>
+
+  <!-- ===== フッター ===== -->
+  <footer class="footer">
+    <div class="footer-logo">
+      <img src="LOGO_PLACEHOLDER" alt="CREDO Co., Ltd. Logo">
+    </div>
+    <p style="color: #666; font-size: 0.95em;">株式会社CREDO 精密栄養ケアプログラム</p>
+    <a href="#" class="next-checkup-btn">次回検査の予約はこちら(3〜6か月後推奨)</a>
+    <p style="font-size: 0.82em; color: #999; margin-top: 14px;">© 2026 CREDO Co., Ltd. All Rights Reserved.</p>
+  </footer>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fills = document.querySelectorAll('.progress-fill');
+  fills.forEach(fill => {
+    const width = fill.style.width;
+    fill.style.width = '0';
+    setTimeout(() => { fill.style.width = width; }, 100);
+  });
+
+  const items = document.querySelectorAll('.checklist-item');
+  items.forEach(item => {
+    item.addEventListener('click', function() {
+      this.classList.toggle('checked');
+    });
+  });
+
+  window.downloadHTML = function() {
+    const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'CREDO精密ケア解析レポート_野崎繁裕_第2回.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+
+    const btn = document.getElementById('dlHtmlBtn');
+    if (btn) {
+      const original = btn.innerHTML;
+      btn.innerHTML = '<span class="dl-icon">✅</span><span>ダウンロード完了</span>';
+      setTimeout(() => { btn.innerHTML = original; }, 2000);
+    }
+  };
+});
+</script>
+
+
+
+</body></html>
