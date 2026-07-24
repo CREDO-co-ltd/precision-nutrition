@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREDO精密ケア解析レポート｜数値変動（前回→今回）小松一幸様</title>
+<style>
+:root{
+  --orange:#EF821D; --yellow-orange:#F7B52C; --red:#E95513;
+  --magenta:#BF2650; --dark-magenta:#B71253; --purple:#5F2C70;
+  --dark-purple:#8A385C; --green:#2F765B; --blue:#365393;
+  --coral:#E9565E; --rose:#C0384D; --dark-text:#2D2D2D;
+  --light-gray:#F5F5F5; --med-gray:#E0E0E0;
+  --improve:#2F765B; --worsen:#E9565E; --neutral:#8892A0;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Hiragino Kaku Gothic ProN','Hiragino Kaku Gothic Pro','Hiragino Sans','Yu Gothic','Meiryo',sans-serif;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  line-height:1.8;color:var(--dark-text);
+  background:linear-gradient(160deg,#f3eef4 0%,#fbf6ef 55%,#f4f7f4 100%);
+  overflow-x:hidden;width:100%;padding:24px;
+}
+.container{
+  max-width:960px;margin:0 auto;background:#fff;border-radius:20px;
+  box-shadow:0 18px 60px rgba(95,44,112,.14);overflow:hidden;
+}
+
+/* HEADER */
+.header{
+  position:relative;display:flex;align-items:center;gap:26px;
+  padding:34px 44px;background:linear-gradient(135deg,#fdf6f0,#f9eef4);
+  border-bottom:3px solid transparent;
+  border-image:linear-gradient(90deg,var(--purple),var(--magenta),var(--orange)) 1;
+}
+.header .logo{width:140px;flex-shrink:0;}
+.header .logo img{width:100%;height:auto;display:block;}
+.header-content{flex:1;}
+.report-title{
+  font-size:2em;font-weight:800;letter-spacing:.01em;line-height:1.25;
+  background:linear-gradient(135deg,var(--purple),var(--magenta),var(--orange));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.report-sub{font-size:1.12em;color:var(--dark-text);margin-top:6px;font-weight:700;}
+.report-date{color:#7a7a7a;font-size:1em;margin-top:6px;letter-spacing:.04em;}
+.report-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+.meta-pill{
+  font-size:.82em;font-weight:600;padding:5px 14px;border-radius:999px;
+  background:rgba(95,44,112,.08);color:var(--purple);
+}
+
+.section{padding:40px 44px;border-bottom:1px solid #f0ecef;}
+.section:last-of-type{border-bottom:none;}
+.section-title{
+  position:relative;font-size:1.5em;font-weight:800;color:var(--dark-text);
+  padding-left:20px;margin-bottom:18px;line-height:1.35;
+}
+.section-title::before{
+  content:"";position:absolute;left:0;top:4px;bottom:4px;width:7px;border-radius:4px;
+  background:linear-gradient(180deg,var(--purple),var(--magenta),var(--orange));
+}
+.section p{margin-bottom:14px;font-size:1.02em;}
+strong{color:var(--dark-magenta);font-weight:700;}
+
+/* LEGEND */
+.compare-legend{
+  display:flex;flex-wrap:wrap;gap:20px;margin:8px 0 26px;font-size:.9em;color:#555;
+}
+.compare-legend .lg{display:flex;align-items:center;gap:8px;}
+.lg-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
+.lg-prev{background:#c3b9cc;}
+.lg-curr{background:linear-gradient(135deg,var(--purple),var(--magenta));}
+.lg-arrow-up{color:var(--improve);font-weight:800;}
+.lg-arrow-down{color:var(--worsen);font-weight:800;}
+
+/* METRIC CARDS */
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+.metric-card{
+  background:#fff;border:1px solid #eee;border-radius:14px;padding:18px 20px;
+  box-shadow:0 4px 14px rgba(0,0,0,.04);animation:fadeInUp .6s ease-out backwards;
+}
+.metric-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.metric-name{font-weight:700;font-size:1.04em;}
+.metric-ideal{font-size:.76em;color:#999;white-space:nowrap;}
+.metric-values{display:flex;align-items:baseline;gap:10px;margin:6px 0 12px;flex-wrap:wrap;}
+.mv-prev{font-size:1.02em;color:#9a90a3;font-weight:600;text-decoration:line-through;text-decoration-color:#d5cbdb;}
+.mv-arrow{font-size:1.15em;font-weight:800;}
+.mv-curr{font-size:1.62em;font-weight:800;letter-spacing:-.01em;}
+.mv-unit{font-size:.7em;color:#888;font-weight:600;margin-left:2px;}
+.mv-tag{font-size:.72em;font-weight:700;padding:3px 10px;border-radius:999px;color:#fff;margin-left:auto;}
+.tag-improve{background:linear-gradient(135deg,#2F765B,#4a9d7d);}
+.tag-worsen{background:linear-gradient(135deg,var(--coral),var(--rose));}
+.tag-flat{background:#9aa2ac;}
+.tag-new{background:linear-gradient(135deg,var(--purple),var(--magenta));}
+
+.dualbar{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.dualbar-row{display:grid;grid-template-columns:38px 1fr;align-items:center;gap:8px;font-size:.74em;color:#888;}
+.dbtrack{position:relative;height:12px;background:var(--light-gray);border-radius:6px;overflow:hidden;}
+.dbfill{height:100%;border-radius:6px;width:0;animation:fillBar 1.3s ease-out forwards;}
+.dbfill.prev{background:#c3b9cc;}
+.dbfill.curr{background:linear-gradient(90deg,var(--purple),var(--magenta));}
+.db-ideal{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--green);z-index:2;}
+.db-ideal::after{
+  content:"理想";position:absolute;top:-15px;left:50%;transform:translateX(-50%);
+  font-size:.72em;color:var(--green);white-space:nowrap;font-weight:700;
+}
+
+/* TABLE */
+.table-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:20px 0 0;}
+.score-table{width:100%;border-collapse:collapse;min-width:600px;font-size:.96em;}
+.score-table thead th{
+  background:linear-gradient(135deg,var(--purple),var(--magenta));color:#fff;
+  padding:14px 12px;text-align:left;font-weight:700;font-size:.94em;
+}
+.score-table thead th:not(:first-child){text-align:center;}
+.score-table tbody td{padding:12px;border-bottom:1px solid #eee;}
+.score-table tbody td:not(:first-child){text-align:center;font-variant-numeric:tabular-nums;}
+.score-table tbody tr:nth-child(even){background:#faf8fb;}
+.td-name{font-weight:600;}
+.td-prev{color:#9a90a3;}
+.value-bad{color:var(--coral);font-weight:700;}
+.value-warn{color:var(--orange);font-weight:700;}
+.value-good{color:var(--green);font-weight:700;}
+.delta{font-weight:700;font-size:.92em;}
+.delta.up{color:var(--improve);}
+.delta.down{color:var(--worsen);}
+.delta.flat{color:var(--neutral);}
+.badge{display:inline-block;border-radius:999px;color:#fff;font-size:.76em;font-weight:700;padding:4px 12px;min-height:26px;}
+.badge.b-improve{background:linear-gradient(135deg,#2F765B,#4a9d7d);}
+.badge.b-worsen{background:linear-gradient(135deg,var(--coral),var(--rose));}
+.badge.b-flat{background:#9aa2ac;}
+.badge.b-new{background:linear-gradient(135deg,var(--purple),var(--magenta));}
+
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fillBar{from{width:0;}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;}.dbfill{width:var(--w,0) !important;}}
+
+@media (max-width:768px){
+  body{padding:10px;font-size:15px;}
+  .container{border-radius:12px;}
+  .header{flex-direction:column;text-align:center;padding:26px 20px;}
+  .report-title{font-size:1.6em;}
+  .report-meta{justify-content:center;}
+  .section{padding:26px 18px;}
+  .section-title{font-size:1.34em;}
+  .metric-grid{grid-template-columns:1fr;}
+}
+@media (max-width:480px){
+  .metric-values{gap:6px;}
+  .mv-curr{font-size:1.42em;}
+}
+@media print{
+  body{background:#fff !important;padding:0 !important;}
+  .container{box-shadow:none !important;border-radius:0 !important;max-width:100% !important;}
+  @page{margin:1.5cm;size:A4;}
+  .section,.metric-card{page-break-inside:avoid;box-shadow:none !important;}
+  *{print-color-adjust:exact;-webkit-print-color-adjust:exact;animation:none !important;}
+  .score-table thead{display:table-header-group;}
+  .score-table tr{page-break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <div class="logo"><img src="https://credo.iwate.jp/CREDO_logo.png" alt="CREDO"></div>
+    <div class="header-content">
+      <div class="report-title">CREDO精密ケア解析レポート</div>
+      <div class="report-sub">小松一幸様｜数値変動（前回 → 今回）</div>
+      <div class="report-date">2025年 盛夏（第7回解析）</div>
+      <div class="report-meta">
+        <span class="meta-pill">HbA1c −1.1pt</span>
+        <span class="meta-pill">HOMA-IR −2.34</span>
+        <span class="meta-pill">フェリチン −283</span>
+        <span class="meta-pill">体重 −約9kg</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 比較カード -->
+  <section class="section">
+    <h2 class="section-title">前回 → 今回 の変化を一目で</h2>
+    <p>各指標の<strong>前回値（薄い灰色）</strong>から<strong>今回値（濃色）</strong>への移動と、精密栄養学的理想値の位置を並べました。バーが「理想」ラインに近づくほど改善しています。</p>
+    <div class="compare-legend">
+      <div class="lg"><span class="lg-dot lg-prev"></span>前回値</div>
+      <div class="lg"><span class="lg-dot lg-curr"></span>今回値</div>
+      <div class="lg"><span class="lg-arrow-up">↑</span>改善方向</div>
+      <div class="lg"><span class="lg-arrow-down">↓</span>要注意方向</div>
+    </div>
+
+    <div class="metric-grid">
+
+      <div class="metric-card" style="animation-delay:.05s">
+        <div class="metric-head"><span class="metric-name">HbA1c</span><span class="metric-ideal">理想 5.0〜5.3%</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">7.4</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">6.3<span class="mv-unit">%</span></span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:35%"></div><div class="dbfill prev" style="width:82%;--w:82%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:35%"></div><div class="dbfill curr" style="width:70%;--w:70%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.1s">
+        <div class="metric-head"><span class="metric-name">HOMA-IR</span><span class="metric-ideal">理想 1.6以下</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">4.95</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--orange)">2.61</span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:32%"></div><div class="dbfill prev" style="width:99%;--w:99%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:32%"></div><div class="dbfill curr" style="width:52%;--w:52%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.15s">
+        <div class="metric-head"><span class="metric-name">空腹時インスリン</span><span class="metric-ideal">μU/mL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">16.7</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">9.6</span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:84%;--w:84%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:48%;--w:48%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.2s">
+        <div class="metric-head"><span class="metric-name">1,5-AG</span><span class="metric-ideal">理想 14μg/mL以上</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">7.1</span><span class="mv-arrow" style="color:var(--improve)">↑</span>
+          <span class="mv-curr" style="color:var(--orange)">12.6<span class="mv-unit">μg/mL</span></span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:78%"></div><div class="dbfill prev" style="width:40%;--w:40%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:78%"></div><div class="dbfill curr" style="width:70%;--w:70%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.25s">
+        <div class="metric-head"><span class="metric-name">中性脂肪（TG）</span><span class="metric-ideal">理想 70〜90mg/dL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">111</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">80<span class="mv-unit">mg/dL</span></span>
+          <span class="mv-tag tag-improve">理想内</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:64%"></div><div class="dbfill prev" style="width:79%;--w:79%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:64%"></div><div class="dbfill curr" style="width:57%;--w:57%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.3s">
+        <div class="metric-head"><span class="metric-name">HDLコレステロール</span><span class="metric-ideal">高いほど良い</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">51</span><span class="mv-arrow" style="color:var(--improve)">↑</span>
+          <span class="mv-curr" style="color:var(--green)">62<span class="mv-unit">mg/dL</span></span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:60%;--w:60%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:73%;--w:73%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.35s">
+        <div class="metric-head"><span class="metric-name">LDLコレステロール</span><span class="metric-ideal">mg/dL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">126</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">97<span class="mv-unit">mg/dL</span></span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:74%;--w:74%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:57%;--w:57%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.4s">
+        <div class="metric-head"><span class="metric-name">TG/HDL比</span><span class="metric-ideal">低いほど良い</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">2.18</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">1.29</span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:76%;--w:76%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:45%;--w:45%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.45s">
+        <div class="metric-head"><span class="metric-name">γ-GTP</span><span class="metric-ideal">理想 20〜30U/L</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">46</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">25<span class="mv-unit">U/L</span></span>
+          <span class="mv-tag tag-improve">理想内</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:50%"></div><div class="dbfill prev" style="width:74%;--w:74%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:50%"></div><div class="dbfill curr" style="width:45%;--w:45%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.5s">
+        <div class="metric-head"><span class="metric-name">ALT</span><span class="metric-ideal">U/L</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">50</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">33<span class="mv-unit">U/L</span></span>
+          <span class="mv-tag tag-improve">改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:75%;--w:75%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:50%;--w:50%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.55s">
+        <div class="metric-head"><span class="metric-name">AST</span><span class="metric-ideal">理想 20〜22U/L</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">38</span><span class="mv-arrow" style="color:var(--neutral)">→</span>
+          <span class="mv-curr" style="color:var(--orange)">38<span class="mv-unit">U/L</span></span>
+          <span class="mv-tag tag-flat">横ばい</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:30%"></div><div class="dbfill prev" style="width:60%;--w:60%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:30%"></div><div class="dbfill curr" style="width:60%;--w:60%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.6s">
+        <div class="metric-head"><span class="metric-name">フェリチン</span><span class="metric-ideal">理想 100〜150ng/mL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">872</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--orange)">589<span class="mv-unit">ng/mL</span></span>
+          <span class="mv-tag tag-improve">改善途上</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:16%"></div><div class="dbfill prev" style="width:97%;--w:97%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:16%"></div><div class="dbfill curr" style="width:66%;--w:66%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.65s">
+        <div class="metric-head"><span class="metric-name">白血球数</span><span class="metric-ideal">/μL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">7,000</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--green)">5,000</span>
+          <span class="mv-tag tag-improve">正常化</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:78%;--w:78%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:55%;--w:55%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.7s">
+        <div class="metric-head"><span class="metric-name">クレアチニン</span><span class="metric-ideal">mg/dL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">1.09</span><span class="mv-arrow" style="color:var(--improve)">↓</span>
+          <span class="mv-curr" style="color:var(--orange)">1.03<span class="mv-unit">mg/dL</span></span>
+          <span class="mv-tag tag-improve">微改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="dbfill prev" style="width:73%;--w:73%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="dbfill curr" style="width:69%;--w:69%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.75s">
+        <div class="metric-head"><span class="metric-name">eGFR</span><span class="metric-ideal">mL/min（高いほど良い）</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">52.4</span><span class="mv-arrow" style="color:var(--improve)">↑</span>
+          <span class="mv-curr" style="color:var(--orange)">55.7</span>
+          <span class="mv-tag tag-improve">微改善</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:82%"></div><div class="dbfill prev" style="width:58%;--w:58%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:82%"></div><div class="dbfill curr" style="width:62%;--w:62%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.8s">
+        <div class="metric-head"><span class="metric-name">マグネシウム</span><span class="metric-ideal">理想 2.4〜2.6mg/dL</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">2.2</span><span class="mv-arrow" style="color:var(--improve)">↑</span>
+          <span class="mv-curr" style="color:var(--orange)">2.3<span class="mv-unit">mg/dL</span></span>
+          <span class="mv-tag tag-flat">やや低</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:85%"></div><div class="dbfill prev" style="width:73%;--w:73%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:85%"></div><div class="dbfill curr" style="width:77%;--w:77%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.85s;border-color:#e6d6ec;">
+        <div class="metric-head"><span class="metric-name">FT3（遊離T3）</span><span class="metric-ideal">理想 3〜4.1pg/mL</span></div>
+        <div class="metric-values">
+          <span class="mv-curr" style="color:var(--purple)">2.76<span class="mv-unit">pg/mL</span></span>
+          <span class="mv-tag tag-new">新規・要注意</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:75%"></div><div class="dbfill curr" style="width:56%;--w:56%"></div></div></div>
+        </div>
+        <p style="font-size:.82em;color:#8A385C;margin:8px 0 0;">理想を下回る「代謝の省エネモード」。T4→T3変換障害が疑われます。</p>
+      </div>
+
+      <div class="metric-card" style="animation-delay:.9s;border-color:#f5d5d7;">
+        <div class="metric-head"><span class="metric-name">CK（クレアチンキナーゼ）</span><span class="metric-ideal">理想 80〜120U/L</span></div>
+        <div class="metric-values">
+          <span class="mv-prev">194</span><span class="mv-arrow" style="color:var(--worsen)">↑</span>
+          <span class="mv-curr" style="color:var(--coral)">294<span class="mv-unit">U/L</span></span>
+          <span class="mv-tag tag-worsen">上昇・要注意</span>
+        </div>
+        <div class="dualbar">
+          <div class="dualbar-row"><span>前回</span><div class="dbtrack"><div class="db-ideal" style="left:33%"></div><div class="dbfill prev" style="width:65%;--w:65%"></div></div></div>
+          <div class="dualbar-row"><span>今回</span><div class="dbtrack"><div class="db-ideal" style="left:33%"></div><div class="dbfill curr" style="width:98%;--w:98%;background:linear-gradient(90deg,var(--coral),var(--rose))"></div></div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 変動テーブル（前回値がある項目のみ） -->
+  <section class="section">
+    <h2 class="section-title">数値変動 一覧（前回比）</h2>
+    <div class="table-wrapper">
+      <table class="score-table">
+        <thead>
+          <tr><th>項目</th><th>前回</th><th>今回</th><th>変化</th><th>評価</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="td-name">HbA1c（%）</td><td class="td-prev">7.4</td><td class="value-warn">6.3</td><td class="delta up">−1.1 ↓</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">空腹時インスリン（μU/mL）</td><td class="td-prev">16.7</td><td class="value-good">9.6</td><td class="delta up">−7.1 ↓</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">HOMA-IR</td><td class="td-prev">4.95</td><td class="value-warn">2.61</td><td class="delta up">−2.34 ↓</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">1,5-AG（μg/mL）</td><td class="td-prev">7.1</td><td class="value-warn">12.6</td><td class="delta up">+5.5 ↑</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">中性脂肪（mg/dL）</td><td class="td-prev">111</td><td class="value-good">80</td><td class="delta up">−31 ↓</td><td><span class="badge b-improve">理想内</span></td></tr>
+          <tr><td class="td-name">HDL-C（mg/dL）</td><td class="td-prev">51</td><td class="value-good">62</td><td class="delta up">+11 ↑</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">LDL-C（mg/dL）</td><td class="td-prev">126</td><td class="value-good">97</td><td class="delta up">−29 ↓</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">TG/HDL比</td><td class="td-prev">2.18</td><td class="value-good">1.29</td><td class="delta up">−0.89 ↓</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">γ-GTP（U/L）</td><td class="td-prev">46</td><td class="value-good">25</td><td class="delta up">−21 ↓</td><td><span class="badge b-improve">理想内</span></td></tr>
+          <tr><td class="td-name">ALT（U/L）</td><td class="td-prev">50</td><td class="value-warn">33</td><td class="delta up">−17 ↓</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">AST（U/L）</td><td class="td-prev">38</td><td class="value-warn">38</td><td class="delta flat">±0 →</td><td><span class="badge b-flat">横ばい</span></td></tr>
+          <tr><td class="td-name">AST/ALT比</td><td class="td-prev">0.76</td><td class="value-warn">1.15</td><td class="delta up">脂肪肝型脱却</td><td><span class="badge b-improve">改善</span></td></tr>
+          <tr><td class="td-name">フェリチン（ng/mL）</td><td class="td-prev">872</td><td class="value-warn">589</td><td class="delta up">−283 ↓</td><td><span class="badge b-improve">改善途上</span></td></tr>
+          <tr><td class="td-name">白血球数（/μL）</td><td class="td-prev">7,000</td><td class="value-good">5,000</td><td class="delta up">−2,000 ↓</td><td><span class="badge b-improve">正常化</span></td></tr>
+          <tr><td class="td-name">クレアチニン（mg/dL）</td><td class="td-prev">1.09</td><td class="value-warn">1.03</td><td class="delta up">−0.06 ↓</td><td><span class="badge b-improve">微改善</span></td></tr>
+          <tr><td class="td-name">eGFR（mL/min）</td><td class="td-prev">52.4</td><td class="value-warn">55.7</td><td class="delta up">+3.3 ↑</td><td><span class="badge b-improve">微改善</span></td></tr>
+          <tr><td class="td-name">マグネシウム（mg/dL）</td><td class="td-prev">2.2</td><td class="value-warn">2.3</td><td class="delta up">+0.1 ↑</td><td><span class="badge b-flat">やや低</span></td></tr>
+          <tr><td class="td-name">CK（U/L）</td><td class="td-prev">194</td><td class="value-bad">294</td><td class="delta down">+100 ↑</td><td><span class="badge b-worsen">要注意</span></td></tr>
+          <tr><td class="td-name">FT3（pg/mL）</td><td class="td-prev">—</td><td class="value-bad">2.76</td><td class="delta down">新規測定</td><td><span class="badge b-new">要注意</span></td></tr>
+          <tr><td class="td-name">体重（kg）</td><td class="td-prev">約85</td><td class="value-good">76.1</td><td class="delta up">−約9 ↓</td><td><span class="badge b-improve">減量成功</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.84em;color:#888;margin-top:16px;">※「変化」列は前回値からの増減。↑↓の色は「改善方向＝緑／要注意方向＝赤」を示します。FT3は今回新規測定のため前回値なし。</p>
+  </section>
+
+</div>
+</body>
+</html>
