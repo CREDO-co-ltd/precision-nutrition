@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREDO精密ケア｜数値変化サマリー｜小松和美様</title>
+<style>
+:root{
+  --orange:#EF821D; --yellow-orange:#F7B52C; --red:#E95513;
+  --magenta:#BF2650; --dark-magenta:#B71253; --purple:#5F2C70;
+  --dark-purple:#8A385C; --green:#2F765B; --blue:#365393;
+  --coral:#E9565E; --rose:#C0384D;
+  --dark-text:#2D2D2D; --light-gray:#F5F5F5; --med-gray:#E0E0E0;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Hiragino Kaku Gothic ProN','Hiragino Kaku Gothic Pro','Hiragino Sans','Yu Gothic','Meiryo',sans-serif;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  line-height:1.8; color:var(--dark-text); background:#ECECEC;
+  padding:20px; overflow-x:hidden; width:100%;
+}
+.container{
+  max-width:960px; margin:0 auto; background:#fff;
+  border-radius:16px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.12);
+}
+
+/* ---------- HEADER ---------- */
+.header{
+  display:flex; align-items:center; gap:24px;
+  padding:34px 40px; position:relative; background:#fff;
+}
+.header::before{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
+  background:linear-gradient(90deg,var(--purple),var(--magenta),var(--orange));
+}
+.logo-img{width:140px;height:auto;flex-shrink:0;}
+.logo-fallback{font-size:1.6em; font-weight:800; letter-spacing:.04em; color:var(--purple); display:none;}
+.header-content{flex:1;}
+.report-title{
+  font-size:1.9em; font-weight:800; line-height:1.25;
+  background:linear-gradient(135deg,var(--purple),var(--magenta),var(--orange));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.report-sub{font-size:1.02em; color:#555; margin-top:4px;}
+.report-client{font-size:1.12em; color:var(--dark-text); font-weight:700; margin-top:6px;}
+.report-date{color:#888; font-size:1em; margin-top:2px;}
+
+/* ---------- SECTION ---------- */
+.section{padding:36px 40px;}
+.section-title{
+  position:relative; font-size:1.55em; font-weight:800; color:var(--purple);
+  padding-left:18px; margin-bottom:10px;
+}
+.section-title::before{
+  content:""; position:absolute; left:0; top:2px; bottom:2px; width:6px;
+  border-radius:3px; background:linear-gradient(180deg,var(--purple),var(--magenta),var(--orange));
+}
+.section-lead{font-size:1em; color:#555; margin-bottom:24px;}
+
+/* ---------- HIGHLIGHT STATS (改善/新たな課題 二面性) ---------- */
+.duo-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:34px;}
+.duo-card{border-radius:14px; padding:22px 24px; color:#fff;}
+.duo-light{background:linear-gradient(135deg,var(--green),#4a9d7d);}
+.duo-shadow{background:linear-gradient(135deg,var(--coral),var(--rose));}
+.duo-card h3{font-size:1.15em; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+.duo-card ul{list-style:none;}
+.duo-card li{
+  padding:8px 0; font-size:.96em; border-bottom:1px dashed rgba(255,255,255,.35);
+  display:flex; justify-content:space-between; gap:10px; align-items:baseline;
+}
+.duo-card li:last-child{border-bottom:none;}
+.duo-card .dv{font-weight:800; white-space:nowrap;}
+
+/* ---------- MAIN TABLE ---------- */
+.table-wrapper{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:20px 0;}
+.score-table{width:100%; border-collapse:collapse; font-size:.98em; min-width:680px;}
+.score-table thead th{
+  background:linear-gradient(135deg,var(--purple),var(--magenta));
+  color:#fff; padding:14px 12px; text-align:center; font-weight:700;
+}
+.score-table thead th:first-child{text-align:left; border-radius:8px 0 0 0;}
+.score-table thead th:last-child{border-radius:0 8px 0 0;}
+.score-table td{padding:12px; border-bottom:1px solid var(--med-gray); text-align:center;}
+.score-table td:first-child{text-align:left; font-weight:600;}
+.score-table tbody tr:hover{background:rgba(95,44,112,.04);}
+.prev{color:#999;}
+.value-bad{color:var(--coral); font-weight:700;}
+.value-warn{color:var(--orange); font-weight:700;}
+.value-good{color:var(--green); font-weight:700;}
+.trend{font-size:.82em; font-weight:700; padding:3px 9px; border-radius:10px; color:#fff; white-space:nowrap; display:inline-block;}
+.trend-up{background:linear-gradient(90deg,var(--green),#4a9d7d);}
+.trend-down{background:linear-gradient(90deg,var(--coral),var(--rose));}
+.trend-flat{background:#9a9a9a;}
+.badge{display:inline-block; padding:4px 12px; border-radius:14px; color:#fff; font-size:.8em; font-weight:700; min-height:28px;}
+.badge-h{background:linear-gradient(90deg,var(--coral),var(--rose));}
+.badge-l{background:linear-gradient(90deg,var(--blue),var(--purple));}
+.badge-ok{background:linear-gradient(90deg,var(--green),#4a9d7d);}
+
+.table-caption{font-size:1.25em; font-weight:700; color:var(--dark-magenta); margin:30px 0 6px;}
+.legend{font-size:.9em; color:#666; margin-bottom:8px;}
+.legend span{font-weight:700;}
+
+.note{
+  background:var(--light-gray); border-left:4px solid var(--purple);
+  border-radius:0 10px 10px 0; padding:16px 20px; margin-top:24px; font-size:.94em; color:#444;
+}
+
+/* ---------- FOOTER ---------- */
+.footer{background:#fff; padding:28px 40px; text-align:center; position:relative;}
+.footer::before{content:""; position:absolute; left:0; right:0; top:0; height:3px;
+  background:linear-gradient(90deg,var(--purple),var(--magenta),var(--orange));}
+.footer-logo{font-weight:800; color:var(--purple); font-size:1.2em; letter-spacing:.04em;}
+.footer p{font-size:.85em; color:#999; margin-top:8px;}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width:768px){
+  body{font-size:15px; padding:10px;}
+  .header{flex-direction:column; text-align:center; padding:24px 16px; gap:14px;}
+  .header-content{text-align:center;}
+  .report-title{font-size:1.55em;}
+  .section{padding:26px 16px;}
+  .section-title{font-size:1.35em;}
+  .duo-grid{grid-template-columns:1fr; gap:16px;}
+}
+@media (max-width:480px){
+  body{font-size:14px; padding:8px;}
+  .section{padding:22px 12px;}
+  .score-table{font-size:.9em;} .score-table th,.score-table td{padding:10px 8px;}
+}
+
+/* ---------- PRINT ---------- */
+@media print{
+  body{background:#fff !important; padding:0 !important;}
+  .container{box-shadow:none !important; border-radius:0 !important; max-width:100% !important;}
+  @page{margin:1.5cm; size:A4;}
+  .duo-card,.note,.section{page-break-inside:avoid;}
+  *{print-color-adjust:exact; -webkit-print-color-adjust:exact; animation:none !important; transition:none !important;}
+  .score-table{page-break-inside:auto;}
+  .score-table tr{page-break-inside:avoid;}
+  .score-table thead{display:table-header-group;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <img class="logo-img" src="https://credo.iwate.jp/CREDO_logo.png" alt="CREDO"
+         onerror="this.style.display='none';document.getElementById('logoFb').style.display='block';">
+    <div id="logoFb" class="logo-fallback">CREDO</div>
+    <div class="header-content">
+      <div class="report-title">数値変化サマリー</div>
+      <div class="report-sub">CREDO精密ケア解析レポート｜第7回・前回比較</div>
+      <div class="report-client">小松 和美 様</div>
+      <div class="report-date">2025年7月　盛夏号</div>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2 class="section-title">前回検査からの数値変化</h2>
+    <p class="section-lead">今回の検査は“光と影の二面性”を映し出しています。改善した項目と、新たな課題として浮上した項目を対比しました。</p>
+
+    <div class="duo-grid">
+      <div class="duo-card duo-light">
+        <h3>🌟 改善した項目（光）</h3>
+        <ul>
+          <li><span>CK（CPK）</span><span class="dv">184 → 69 U/L</span></li>
+          <li><span>総コレステロール</span><span class="dv">318 → 291 mg/dL（-27）</span></li>
+          <li><span>LDLコレステロール</span><span class="dv">218 → 198 mg/dL（-20）</span></li>
+          <li><span>フェリチン</span><span class="dv">205 → 178 ng/mL</span></li>
+          <li><span>CRP</span><span class="dv">0.02 → 0.01 mg/dL</span></li>
+        </ul>
+      </div>
+      <div class="duo-card duo-shadow">
+        <h3>⚠️ 新たな課題（影）</h3>
+        <ul>
+          <li><span>コルチゾール</span><span class="dv">7.5 → 10.2 μg/dL</span></li>
+          <li><span>TSH</span><span class="dv">0.295 → 0.184 μIU/mL</span></li>
+          <li><span>FT3</span><span class="dv">2.77 → 2.69 pg/mL</span></li>
+          <li><span>ALP（IFCC法）</span><span class="dv">NEW ▸ 126 U/L（H）</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="table-caption">主要マーカー 前回比較一覧</div>
+    <p class="legend">数値の色は精密栄養学的理想値との乖離を表します：<span class="value-good">緑＝良好</span>／<span class="value-warn">橙＝要注意</span>／<span class="value-bad">赤＝要対処</span></p>
+    <div class="table-wrapper">
+      <table class="score-table">
+        <thead>
+          <tr><th>項目</th><th>前回</th><th>今回</th><th>推移</th><th>精密栄養学的理想値</th><th>判定</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>CK（CPK）</td><td class="prev">184</td><td class="value-good">69</td><td><span class="trend trend-up">▼ 大幅改善</span></td><td>80〜100 U/L</td><td><span class="badge badge-ok">改善</span></td></tr>
+          <tr><td>総コレステロール</td><td class="prev">318</td><td class="value-warn">291</td><td><span class="trend trend-up">▼ -27</span></td><td>180〜220 mg/dL</td><td><span class="badge badge-h">高値</span></td></tr>
+          <tr><td>LDLコレステロール</td><td class="prev">218</td><td class="value-bad">198</td><td><span class="trend trend-up">▼ -20</span></td><td>80〜120 mg/dL</td><td><span class="badge badge-h">高値</span></td></tr>
+          <tr><td>HDLコレステロール</td><td class="prev">—</td><td class="value-good">76</td><td><span class="trend trend-flat">—</span></td><td>70〜100 mg/dL</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>中性脂肪</td><td class="prev">—</td><td class="value-warn">48</td><td><span class="trend trend-flat">—</span></td><td>70〜90 mg/dL</td><td><span class="badge badge-l">低値</span></td></tr>
+          <tr><td>コルチゾール</td><td class="prev">7.5</td><td class="value-bad">10.2</td><td><span class="trend trend-down">▲ 急上昇</span></td><td>4〜6 μg/dL</td><td><span class="badge badge-h">高値</span></td></tr>
+          <tr><td>TSH</td><td class="prev">0.295</td><td class="value-bad">0.184</td><td><span class="trend trend-down">▼ さらに低下</span></td><td>0.5〜2.0 μIU/mL</td><td><span class="badge badge-l">低値 L</span></td></tr>
+          <tr><td>FT3</td><td class="prev">2.77</td><td class="value-warn">2.69</td><td><span class="trend trend-down">▼ 低下</span></td><td>3.0〜4.1 pg/mL</td><td><span class="badge badge-l">低値</span></td></tr>
+          <tr><td>フェリチン</td><td class="prev">205</td><td class="value-warn">178</td><td><span class="trend trend-up">▼ 改善</span></td><td>50〜80 ng/mL</td><td><span class="badge badge-h">高値 H</span></td></tr>
+          <tr><td>CRP</td><td class="prev">0.02</td><td class="value-good">0.01</td><td><span class="trend trend-up">▼ 改善</span></td><td>低いほど良</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>ALP（IFCC法）</td><td class="prev">—</td><td class="value-bad">126</td><td><span class="trend trend-flat">NEW</span></td><td>62〜64 U/L</td><td><span class="badge badge-h">高値 H</span></td></tr>
+          <tr><td>LDH（LD IFCC法）</td><td class="prev">136</td><td class="value-warn">132</td><td><span class="trend trend-flat">ほぼ横ばい</span></td><td>180〜200 U/L</td><td><span class="badge badge-l">低値</span></td></tr>
+          <tr><td>マグネシウム</td><td class="prev">—</td><td class="value-warn">2.2</td><td><span class="trend trend-flat">—</span></td><td>2.4〜2.6 mg/dL</td><td><span class="badge badge-l">低値</span></td></tr>
+          <tr><td>亜鉛</td><td class="prev">—</td><td class="value-warn">97</td><td><span class="trend trend-flat">—</span></td><td>90〜120 μg/dL</td><td><span class="badge badge-l">低域</span></td></tr>
+          <tr><td>銅</td><td class="prev">—</td><td class="value-warn">126</td><td><span class="trend trend-flat">—</span></td><td>80〜120 μg/dL</td><td><span class="badge badge-h">やや高</span></td></tr>
+          <tr><td>25-OHビタミンD</td><td class="prev">—</td><td class="value-good">66.6</td><td><span class="trend trend-flat">—</span></td><td>60〜80 ng/mL</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>AST</td><td class="prev">—</td><td class="value-warn">19</td><td><span class="trend trend-flat">—</span></td><td>20〜22 U/L</td><td><span class="badge badge-l">やや低</span></td></tr>
+          <tr><td>ALT</td><td class="prev">—</td><td class="value-warn">15</td><td><span class="trend trend-flat">—</span></td><td>20〜22 U/L</td><td><span class="badge badge-l">やや低</span></td></tr>
+          <tr><td>γ-GT</td><td class="prev">—</td><td class="value-warn">15</td><td><span class="trend trend-flat">—</span></td><td>20〜30 U/L</td><td><span class="badge badge-l">やや低</span></td></tr>
+          <tr><td>血糖</td><td class="prev">—</td><td class="value-good">88</td><td><span class="trend trend-flat">—</span></td><td>80〜90 mg/dL</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>HbA1c</td><td class="prev">—</td><td class="value-good">5.2</td><td><span class="trend trend-flat">—</span></td><td>5.0〜5.3%</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>インスリン</td><td class="prev">—</td><td class="value-good">2.7</td><td><span class="trend trend-flat">—</span></td><td>2〜4 μU/mL</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>ヘモグロビン</td><td class="prev">—</td><td class="value-good">13.9</td><td><span class="trend trend-flat">—</span></td><td>13〜14 g/dL</td><td><span class="badge badge-ok">良好</span></td></tr>
+          <tr><td>ペプシノーゲンI</td><td class="prev">—</td><td class="value-warn">46.8</td><td><span class="trend trend-flat">—</span></td><td>50〜60 ng/mL</td><td><span class="badge badge-l">やや低</span></td></tr>
+          <tr><td>総蛋白</td><td class="prev">—</td><td class="value-warn">6.7</td><td><span class="trend trend-flat">—</span></td><td>7.2〜7.5 g/dL</td><td><span class="badge badge-l">低値</span></td></tr>
+          <tr><td>アルブミン</td><td class="prev">—</td><td class="value-warn">4.4</td><td><span class="trend trend-flat">—</span></td><td>4.5 g/dL以上</td><td><span class="badge badge-l">やや低</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <strong>読み解きの要点：</strong>コルチゾール急上昇（7.5→10.2）を起点に「ストレス→甲状腺抑制（TSH・FT3低下）→代謝低下→脂質蓄積」という因果連鎖が繋がっています。この起点を下げることが、他のすべての課題を連鎖的に改善させる“てこの支点”です。なおTSHが一般基準範囲をも下回っている点、およびALP高値と骨代謝については、次回受診時に主治医へ共有されることをお勧めします。
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-logo">CREDO精密ケア</div>
+    <p>本サマリーはAIによる解析結果であり、医学的診断・治療方針の決定を目的としたものではありません。病気や疾病等については必ずかかりつけの医師にご相談ください。</p>
+  </footer>
+
+</div>
+</body>
+</html>
