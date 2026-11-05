@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CREDO精密ケア解析レポート｜田村邦宏様</title>
+<style>
+:root {
+  --orange: #EF821D;
+  --yellow-orange: #F7B52C;
+  --red: #E95513;
+  --magenta: #BF2650;
+  --dark-magenta: #B71253;
+  --purple: #5F2C70;
+  --dark-purple: #8A385C;
+  --green: #2F765B;
+  --blue: #365393;
+  --coral: #E9565E;
+  --rose: #C0384D;
+  --dark-text: #2D2D2D;
+  --light-gray: #F5F5F5;
+  --med-gray: #E0E0E0;
+  --grad-main: linear-gradient(135deg, var(--purple), var(--magenta), var(--orange));
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "ヒラギノ角ゴ ProN W3", "Noto Sans JP", Meiryo, sans-serif;
+  color: var(--dark-text); background: #f3eff4; line-height: 1.85; font-size: 15px; padding: 32px 16px;
+}
+.container { max-width: 1000px; margin: 0 auto; background: #fff; border-radius: 18px; box-shadow: 0 10px 40px rgba(95,44,112,.12); overflow: hidden; }
+.inner { padding: 0 48px; }
+
+/* header */
+.header { display: flex; align-items: center; gap: 28px; padding: 36px 48px 26px; border-bottom: 1px solid var(--med-gray); }
+.logo-wrap img { width: 140px; height: auto; display: block; }
+.logo-fallback { font-weight: 800; font-size: 28px; letter-spacing: .12em; color: var(--purple); }
+.report-title { font-size: 30px; font-weight: 800; line-height: 1.35; background: var(--grad-main); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--purple); }
+.client-name { font-size: 19px; font-weight: 700; margin-top: 4px; }
+.report-date { font-size: 13px; color: #666; }
+
+/* sections */
+.section { padding: 34px 0 30px; border-bottom: 1px solid var(--light-gray); }
+.section:last-child { border-bottom: none; }
+.section-title { position: relative; font-size: 22px; font-weight: 800; color: var(--purple); padding-left: 18px; margin-bottom: 18px; line-height: 1.45; }
+.section-title::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 6px; border-radius: 3px; background: var(--grad-main); }
+.section-subtitle { font-size: 17px; font-weight: 700; color: var(--dark-magenta); margin: 24px 0 10px; }
+p { margin-bottom: 12px; }
+.note { font-size: 13px; color: #666; }
+strong { color: var(--dark-magenta); }
+
+.highlight { background: linear-gradient(135deg, #fbf3f8, #fff6ec); border-left: 5px solid var(--magenta); border-radius: 12px; padding: 20px 24px; margin: 16px 0; }
+.highlight .catch { font-size: 19px; font-weight: 800; color: var(--purple); margin-bottom: 8px; line-height: 1.55; }
+.highlight p:last-child { margin-bottom: 0; }
+
+.premise { list-style: none; counter-reset: pr; display: grid; gap: 10px; }
+.premise li { counter-increment: pr; position: relative; background: var(--light-gray); border-radius: 10px; padding: 12px 16px 12px 52px; font-size: 14px; }
+.premise li::before { content: counter(pr); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--grad-main); color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+
+/* focus cards (3 points) */
+.focus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+.focus-card { border: 1px solid var(--med-gray); border-top: 4px solid var(--coral); border-radius: 12px; padding: 14px 16px; background: #fff; }
+.focus-card .lbl { font-size: 12px; color: #777; }
+.focus-card .val { font-size: 21px; white-space: nowrap; font-weight: 800; color: var(--rose); line-height: 1.3; }
+.focus-card .val small { font-size: 12px; font-weight: 600; color: #777; }
+.focus-card .ref { font-size: 12px; color: #555; margin: 4px 0 8px; }
+.focus-card .txt { font-size: 13px; line-height: 1.7; }
+
+/* change bars */
+.change-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 30px; margin-top: 14px; }
+.change-item .name { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; }
+.change-item .name span { font-weight: 500; color: #666; font-size: 12.5px; }
+.bar-row { display: grid; grid-template-columns: 42px 1fr 58px; align-items: center; gap: 8px; font-size: 12px; margin-top: 4px; }
+.progress-bar { height: 14px; background: var(--light-gray); border-radius: 7px; overflow: hidden; position: relative; }
+.progress-fill { height: 100%; border-radius: 7px; position: relative; }
+.fill-feb { background: #bdb3c3; }
+.fill-sep { background: var(--grad-main); }
+.bar-row .v { text-align: right; font-weight: 700; }
+.change-item .cm { font-size: 12.5px; color: #555; margin-top: 3px; }
+
+/* table */
+.table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
+.score-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13.5px; }
+.score-table thead th { background: var(--purple); color: #fff; padding: 9px 8px; font-weight: 600; text-align: center; white-space: nowrap; }
+.score-table td { padding: 8px 8px; border-bottom: 1px solid var(--med-gray); vertical-align: top; }
+.score-table .grp td { background: #f6eef6; color: var(--purple); font-weight: 700; padding: 6px 10px; }
+.score-table .item { white-space: nowrap; font-weight: 600; }
+.score-table { table-layout: fixed; }
+.score-table .num { text-align: center; }
+.score-table .now { font-weight: 800; }
+.score-table .cmt { font-size: 12.5px; color: #444; }
+.badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 20px; white-space: nowrap; }
+.badge-good { background: #e3f1ea; color: var(--green); }
+.badge-warn { background: #fdeedb; color: #b45f0c; }
+.badge-bad { background: #fbe3e4; color: var(--rose); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12.5px; margin: 6px 0 12px; color: #555; }
+
+/* priority cards */
+.priority-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 14px; }
+.priority-card { border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.07); border: 1px solid var(--light-gray); }
+.priority-head { padding: 12px 16px; color: #fff; }
+.priority-head .no { font-size: 12px; opacity: .9; }
+.priority-head .ttl { font-size: 16px; font-weight: 800; line-height: 1.45; }
+.p1 .priority-head { background: linear-gradient(135deg, var(--purple), var(--magenta)); }
+.p2 .priority-head { background: linear-gradient(135deg, var(--magenta), var(--red)); }
+.p3 .priority-head { background: linear-gradient(135deg, var(--red), var(--orange)); }
+.priority-body { padding: 12px 16px 14px; font-size: 13.5px; line-height: 1.75; }
+
+/* food cards */
+.food-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 14px; }
+.food-card { border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.07); border: 1px solid var(--light-gray); }
+.food-head { padding: 10px 12px; color: #fff; font-weight: 700; font-size: 14px; line-height: 1.45; }
+.f1 .food-head { background: var(--green); }
+.f2 .food-head { background: var(--orange); }
+.f3 .food-head { background: var(--blue); }
+.f4 .food-head { background: var(--dark-purple); }
+.food-card ul { list-style: none; padding: 6px 12px 10px; }
+.food-card li { font-size: 13px; line-height: 1.65; padding: 7px 0; border-bottom: 1px dashed var(--med-gray); }
+.food-card li:last-child { border-bottom: none; }
+
+/* timeline */
+.timeline { display: grid; gap: 10px; margin-top: 14px; }
+.timeline-item { display: grid; grid-template-columns: 96px 44px 1fr 210px; gap: 14px; align-items: start; background: var(--light-gray); border-radius: 12px; padding: 12px 16px; }
+.t-time { font-weight: 800; color: var(--purple); font-size: 13.5px; line-height: 1.5; }
+.t-icon { width: 40px; height: 40px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.25em; }
+.t-body h4 { font-size: 15px; margin-bottom: 4px; color: var(--dark-text); }
+.t-body p { font-size: 13.5px; margin-bottom: 6px; }
+.t-body p:last-child { margin-bottom: 0; }
+.t-effect { font-size: 12.5px; background: #fff; border-radius: 8px; padding: 8px 10px; color: var(--green); line-height: 1.6; }
+
+/* doctor box */
+.doctor-box { background: #f1f4fa; border: 1px solid #cdd6ea; border-radius: 12px; padding: 18px 22px; margin: 14px 0; }
+.doctor-box h4 { color: var(--blue); font-size: 15px; margin-bottom: 8px; }
+.doctor-list { list-style: none; display: grid; gap: 8px; }
+.doctor-list li { position: relative; padding-left: 22px; font-size: 14px; }
+.doctor-list li::before { content: "✓"; position: absolute; left: 0; color: var(--blue); font-weight: 800; }
+
+/* checklist */
+.checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.check-item { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--med-gray); border-radius: 10px; padding: 12px 14px; cursor: pointer; user-select: none; font-size: 14px; line-height: 1.65; transition: background .2s; }
+.check-item .box { flex: 0 0 22px; height: 22px; border: 2px solid var(--magenta); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 14px; margin-top: 1px; }
+.check-item.done { background: #fbf1f6; }
+.check-item.done .box { background: var(--magenta); }
+.check-item.done .box::after { content: "✓"; }
+
+.next-tests { background: linear-gradient(135deg, #fff8ee, #fdf1f6); border-radius: 12px; padding: 18px 22px; margin-top: 18px; border: 1px solid #f5dcc4; }
+.next-tests h4 { color: var(--red); font-size: 15px; margin-bottom: 8px; }
+.next-tests ul { padding-left: 1.3em; font-size: 14px; }
+.next-tests li { margin-bottom: 4px; }
+
+/* footer */
+.footer { text-align: center; padding: 30px 48px 36px; background: var(--light-gray); }
+.footer img { width: 120px; height: auto; margin-bottom: 10px; }
+.footer .logo-fallback { display: block; margin-bottom: 10px; }
+.footer p { font-size: 12.5px; color: #666; margin-bottom: 6px; }
+.next-checkup-btn { display: inline-block; margin: 8px 0 14px; padding: 12px 30px; border-radius: 30px; background: var(--grad-main); color: #fff; font-weight: 700; text-decoration: none; font-size: 15px; }
+
+/* topic cards (血液検査の解説) */
+.topic { border: 1px solid var(--med-gray); border-left: 5px solid var(--magenta); border-radius: 12px; padding: 16px 18px 14px; margin: 14px 0 18px; background: #fff; }
+.topic-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.topic-icon { flex: 0 0 34px; height: 34px; border-radius: 50%; background: #f6eef6; display: flex; align-items: center; justify-content: center; font-size: 1.1em; }
+.topic-head h4 { font-size: 16.5px; color: var(--purple); line-height: 1.45; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.chip { font-size: 12.5px; padding: 3px 10px; border-radius: 14px; background: var(--light-gray); color: #444; white-space: nowrap; }
+.chip-bad { background: #fbe3e4; color: var(--rose); font-weight: 700; }
+.chip-warn { background: #fdeedb; color: #b45f0c; font-weight: 700; }
+.chip-good { background: #e3f1ea; color: var(--green); font-weight: 700; }
+.topic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tcol { border-radius: 10px; padding: 10px 12px; }
+.tcol-ttl { font-size: 12.5px; font-weight: 800; margin-bottom: 4px; }
+.tcol ul { list-style: none; }
+.tcol li { position: relative; padding-left: 14px; font-size: 13.5px; line-height: 1.7; margin-bottom: 5px; }
+.tcol li:last-child { margin-bottom: 0; }
+.tcol li::before { content: ""; position: absolute; left: 2px; top: .7em; width: 6px; height: 6px; border-radius: 50%; }
+.t-how { background: #f4f1f7; } .t-how .tcol-ttl { color: var(--purple); } .t-how li::before { background: var(--purple); }
+.t-read { background: #fdf3ea; } .t-read .tcol-ttl { color: #b45f0c; } .t-read li::before { background: var(--orange); }
+.t-life { background: #edf5f0; } .t-life .tcol-ttl { color: var(--green); } .t-life li::before { background: var(--green); }
+.topic-point { margin-top: 10px; font-size: 13.5px; font-weight: 700; color: var(--dark-magenta); background: #fbf1f6; border-radius: 8px; padding: 8px 12px 8px 34px; position: relative; }
+.topic-point::before { content: "!"; position: absolute; left: 11px; top: 8px; width: 16px; height: 16px; border-radius: 50%; background: var(--magenta); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+
+@media screen and (max-width: 820px) {
+  .food-grid { grid-template-columns: 1fr 1fr; }
+  .priority-cards, .focus-grid { grid-template-columns: 1fr; }
+  .timeline-item { grid-template-columns: 80px 1fr; }
+  .timeline-item .t-icon { display: none; }
+  .t-effect { grid-column: 1 / -1; }
+  .topic-grid { grid-template-columns: 1fr; }
+}
+@media screen and (max-width: 600px) {
+  body { padding: 0; font-size: 14.5px; }
+  .container { border-radius: 0; }
+  .inner { padding: 0 16px; }
+  .header { flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px 16px 18px; }
+  .logo-wrap img { width: 120px; }
+  .report-title { font-size: 24px; }
+  .section-title { font-size: 19px; }
+  .change-grid, .checklist-grid, .food-grid { grid-template-columns: 1fr; }
+  .timeline-item { grid-template-columns: 1fr; gap: 6px; }
+  .highlight { padding: 16px 16px; }
+  .footer { padding: 26px 16px 30px; }
+  .topic { padding: 14px 12px 12px; }
+  .chip { white-space: normal; }
+}
+
+/* ---------- 印刷・PDF ---------- */
+@page { size: A4; margin: 12mm 11mm; }
+@media print {
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; animation: none !important; transition: none !important; }
+  html, body { background: #fff !important; }
+  body { padding: 0 !important; font-size: 10pt; line-height: 1.65; }
+  .container { max-width: none !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible !important; }
+  .inner { padding: 0 !important; }
+
+  .header { display: flex; flex-direction: row; text-align: left; gap: 20px; padding: 0 0 14px; background: #fff !important; break-after: avoid; page-break-after: avoid; }
+  .logo-wrap img { width: 110px; }
+  .report-title { font-size: 20pt; background: none !important; -webkit-text-fill-color: var(--purple); color: var(--purple); }
+  .client-name { font-size: 13pt; }
+  .report-date { font-size: 9.5pt; }
+
+  .section { padding: 16px 0 18px; break-inside: auto; page-break-inside: auto; }
+  .section-title { font-size: 15pt; margin-bottom: 12px; break-after: avoid; page-break-after: avoid; }
+  .section-subtitle { font-size: 12pt; margin: 16px 0 8px; break-after: avoid; page-break-after: avoid; }
+  p { orphans: 3; widows: 3; }
+  .highlight, .doctor-box { padding: 14px 18px; }
+  .highlight .catch { font-size: 12pt; }
+
+  .change-grid { grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-top: 10px; }
+  .gene-grid, .checklist-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .priority-cards, .focus-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .food-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .food-card li { font-size: 8.8pt; padding: 6px 0; }
+  .food-head { padding: 8px 10px; font-size: 9.5pt; }
+  .food-card ul { padding: 4px 10px 8px; }
+  .priority-head { padding: 10px 14px; }
+  .priority-head .ttl { font-size: 11pt; }
+  .priority-body { padding: 10px 14px 12px; font-size: 9pt; }
+  .focus-card .txt { font-size: 8.8pt; }
+  .timeline-item { grid-template-columns: 70px 40px 1fr 170px; gap: 10px; padding: 8px 12px; }
+  .timeline-item .t-icon { display: flex; width: 36px; height: 36px; font-size: 1.1em; }
+  .t-body p { font-size: 9.2pt; }
+  .t-effect { font-size: 8.5pt; grid-column: auto; }
+  .progress-bar { height: 12px; }
+  .progress-fill::after { display: none; }
+
+  .table-wrapper { overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+  .score-table, .supp-table { min-width: 0 !important; width: 100%; font-size: 8.6pt; }
+  .score-table thead { display: table-header-group; }
+  .score-table thead th { padding: 6px 5px; }
+  .score-table td, .supp-table td { padding: 5px 5px; }
+  .score-table .item { white-space: normal; }
+  .score-table .cmt { font-size: 8.2pt; }
+  .badge { font-size: 7.8pt; padding: 1px 8px; }
+
+  tr, .change-item, .priority-card, .food-card, .gene-box, .timeline-item, .check-item, .doctor-list li, .premise li, .revise-list li, .focus-card { break-inside: avoid; page-break-inside: avoid; }
+  .priority-card, .food-card, .gene-box, .highlight, .doctor-box { box-shadow: none !important; }
+  .priority-card, .food-card { border: 1px solid var(--med-gray); }
+
+  .highlight { break-inside: avoid; page-break-inside: avoid; }
+  .highlight:has(> p:nth-of-type(2)) { break-inside: auto; page-break-inside: auto; }
+  .note { break-after: avoid; page-break-after: avoid; }
+  .checklist-grid, .next-tests { break-inside: avoid; page-break-inside: avoid; }
+  .footer { padding: 18px 0 0; background: #fff !important; break-inside: avoid; page-break-inside: avoid; }
+  .footer img { width: 90px; }
+  .next-checkup-btn { padding: 8px 22px; }
+  .topic { padding: 10px 12px; margin: 8px 0 12px; break-inside: avoid; page-break-inside: avoid; }
+  .topic-head h4 { font-size: 11pt; }
+  .topic-icon { flex-basis: 26px; height: 26px; font-size: .95em; }
+  .chips { margin-bottom: 8px; }
+  .chip { font-size: 8pt; padding: 1px 8px; }
+  .topic-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tcol { padding: 7px 9px; }
+  .tcol-ttl { font-size: 8.5pt; }
+  .tcol li { font-size: 8.6pt; line-height: 1.6; margin-bottom: 3px; }
+  .topic-point { font-size: 8.8pt; padding: 6px 10px 6px 30px; margin-top: 7px; }
+  .topic-point::before { top: 6px; }
+  a[href]:after { content: none; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="header">
+  <div class="logo-wrap">
+    <img src="https://credo.iwate.jp/CREDO_logo.png" alt="CREDO" onerror="this.outerHTML='<span class=&quot;logo-fallback&quot;>CREDO</span>'">
+  </div>
+  <div>
+    <h1 class="report-title">CREDO精密ケア解析レポート</h1>
+    <div class="client-name">田村 邦宏 様</div>
+    <div class="report-date">対象の血液検査：2026年2月2日・2026年9月4日 ／ 作成日：2026年11月4日</div>
+  </div>
+</header>
+
+<div class="inner">
+
+<!-- はじめに -->
+<section class="section">
+  <h2 class="section-title">はじめに</h2>
+  <p>田村様は今回、2月の検査から何が変わったのかを知り、<strong>これからの健康増進に向けて行動を始めたい</strong>とお伝えくださいました。仕組みまで掘り下げて理解したいというお気持ちを大切に、数字の変化、今回初めて分かった栄養関連の情報、暮らしで試せる工夫をつなげて考えます。</p>
+  <p>11月上旬〜12月上旬は日が短くなり、外に出る機会や夜の過ごし方も変わる季節です。取り組みを一度に増やすより、<strong>食事と休息のうち続けやすい一つを選べる形</strong>を目指しましょう。</p>
+  <p>初回には「やや過体重、寝つきが悪い」というご相談がありました。今回の検査で血糖や脂質だけでなく、ホモシステイン、ビタミンD、鉄の蓄えなどを考える情報が加わったことは、次の方針を具体化する助けになります。一方で、検査の数値が変わったことと、特定の食事や生活の工夫が効いたことは同じではありません。これから始める段階というご自身の言葉を尊重し、まだ実践していないことを達成済みとして評価する必要もありません。</p>
+  <p>精密栄養学では、食べ物を取る量だけでなく、消化・吸収、血液による運搬、細胞での利用、代謝産物の処理までを考えます。詳しく理解することを、原因を一つに決めたり製品を増やしたりするためではなく、<strong>ご自身に必要な相談と実践を選ぶため</strong>に使っていきましょう。</p>
+
+  <h3 class="section-subtitle">本レポートの前提条件</h3>
+  <ol class="premise">
+    <li>本レポートは、精密栄養学的観点からの一つの示唆です。推奨事項は、ご提供いただいた血液検査結果やライフログなどの客観的指標に基づく推察と、一般的な精密栄養学の知見に基づくアドバイスが中心です。検査結果は測定時点の状態を示すため、過去の結果が現在の状態と一致するとは限りません。</li>
+    <li>本レポートは医学的診断や治療に代わるものではありません。健康上の懸念や治療中の疾患については、必要に応じて主治医にご相談ください。</li>
+    <li>お身体の状態は、食事、運動、睡眠、ストレスなどの生活習慣によって日々変化します。提案内容を実践した際の変化を観察するためにも、今後も継続的に健康データを取得することをおすすめします。</li>
+  </ol>
+</section>
+
+<!-- 総合評価 -->
+<section class="section">
+  <h2 class="section-title">総合的な健康状態の評価</h2>
+  <div class="highlight">
+    <div class="catch">必要な診療の支えを使いながら、<br>食事と休息のうち一つを選んでよい段階</div>
+    <p>まず主治医とホモシステイン・ビタミンD・フェリチンの背景と対応を共有し、11月からは主食・主菜・野菜を組み合わせる食事と、現在の寝つきに合う休息の整え方を少しずつ具体化する方針です。</p>
+  </div>
+
+  <h3 class="section-subtitle">9月に分かった、今後の評価につなげたい3つの情報</h3>
+  <div class="focus-grid">
+    <div class="focus-card">
+      <div class="lbl">第一　ホモシステイン</div>
+      <div class="val">19.9 <small>nmol/mL</small></div>
+      <div class="ref">検査機関 6.3〜18.9／栄養学的参考 6.5〜7.5</div>
+      <div class="txt">栄養と代謝を確かめる入口にします。この結果だけで特定のビタミン欠乏や遺伝子型は決まりません。必要ならB12・葉酸などの評価や再検の時期を医師と相談します。</div>
+    </div>
+    <div class="focus-card">
+      <div class="lbl">第二　25-OHビタミンD</div>
+      <div class="val">19.8 <small>ng/mL</small></div>
+      <div class="ref">20未満＝欠乏の区分／栄養学的参考 60〜80</div>
+      <div class="txt">補充が必要か、どの量・期間で行うかを診療で具体化したい所見です。自己判断で高い目標に近づけず、魚や卵など食事の供給源を保ちます。</div>
+    </div>
+    <div class="focus-card">
+      <div class="lbl">第三　フェリチン／血清鉄</div>
+      <div class="val">352<small> ng/mL</small> ／ 68<small> μg/dL</small></div>
+      <div class="ref">フェリチン参考 100〜150／血清鉄参考 100〜120</div>
+      <div class="txt">「鉄を足す」「鉄が過剰」という両方の早合点を避けます。血球・炎症・肝臓や代謝の状態、その後の推移を合わせて確認します。</div>
+    </div>
+  </div>
+  <p class="note">※「精密栄養学的理想値（参考）」は、食事や代謝を考えるための参考範囲であり、医学的に確立した診断基準や全員共通の治療目標ではありません。検査機関の基準や田村様の個別の治療目標とは分けて扱います。</p>
+
+  <h3 class="section-subtitle">2月 → 9月の変化</h3>
+  <p class="note">バーは2回の数値の大きさを比べたものです。数値の差は、特定の食事や生活の工夫の成果とは分けて考えます。</p>
+  <div class="change-grid">
+    <div class="change-item">
+      <div class="name">血糖 <span>参考 80〜90 mg/dL</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:85%"></div></div><span class="v">102</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:77%"></div></div><span class="v">92</span></div>
+      <div class="cm">9月は参考より少し高い側。単回の血糖が下がったことだけを改善の証拠にはしません。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">HbA1c <span>参考 5.0〜5.3 %</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:80%"></div></div><span class="v">5.6</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:80%"></div></div><span class="v">5.6</span></div>
+      <div class="cm">両時点とも同じで、参考より高い側。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">中性脂肪 <span>参考 70〜90 mg/dL</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:89%"></div></div><span class="v">107</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:65%"></div></div><span class="v">78</span></div>
+      <div class="cm">9月は参考内（採血時の食事条件に注意）。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">LDLコレステロール <span>参考 80〜120 mg/dL</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:78%"></div></div><span class="v">125</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:84%"></div></div><span class="v">135</span></div>
+      <div class="cm">参考より高い側。急に悪化したとはまとめず、経過を合わせます。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">HDLコレステロール <span>参考 70〜100 mg/dL</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:62%"></div></div><span class="v">62</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:64%"></div></div><span class="v">64</span></div>
+      <div class="cm">参考より低い側。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">血清鉄 <span>参考 100〜120 μg/dL</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:85%"></div></div><span class="v">127</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:45%"></div></div><span class="v">68</span></div>
+      <div class="cm">9月は参考より低い一方、検査機関の範囲（58〜188）内。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">ALT <span>参考 20〜22 U/L</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:45%"></div></div><span class="v">18</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:65%"></div></div><span class="v">26</span></div>
+      <div class="cm">9月は参考より高い一方、施設範囲（4〜43）内。</div>
+    </div>
+    <div class="change-item">
+      <div class="name">尿素窒素 <span>参考 15〜17 mg/dL</span></div>
+      <div class="bar-row"><span>2月</span><div class="progress-bar"><div class="progress-fill fill-feb" style="width:78%"></div></div><span class="v">15.5</span></div>
+      <div class="bar-row"><span>9月</span><div class="progress-bar"><div class="progress-fill fill-sep" style="width:62%"></div></div><span class="v">12.4</span></div>
+      <div class="cm">9月は参考より低く、施設範囲内。そのまま蛋白質不足とは置き換えません。</div>
+    </div>
+  </div>
+
+  <h3 class="section-subtitle">これまでのご相談と、今回の変化</h3>
+  <p>初回は身長174cm、体重74kg、睡眠4時間以上6時間未満、質はよくない、就寝3時という申告でした。歩行30分未満、運動週1回、便は2〜3日に1回でバナナ状という回答もありました。これらは初回の暮らしを表す情報で、今回もそのまま同じとは限りません。9月の診療コメントでは睡眠約6時間と説明されていますが、寝つきや起床時の休養感がどう変わったかは、今の体感と一緒に振り返る必要があります。</p>
+  <p>前回は、就寝を少し早めること、食後の短い散歩、主菜や野菜を組み合わせることなどが提案されました。今回は新しく分かったホモシステインやDの評価を主治医と進め、その上で食べ方と休息を選ぶ形へ整理します。前回の提案を実行したかどうかと、2月から9月の値の差は分けて考えます。変化の全てを努力の成果や不足と結び付けず、今から選べる方法に目を向けてよい段階です。</p>
+</section>
+
+<!-- 血液検査の分析 -->
+<section class="section">
+  <h2 class="section-title">お身体の現状について（血液検査の分析）</h2>
+  <div class="legend">
+    <span><span class="badge badge-good">参考内</span> 栄養学的参考の範囲内</span>
+    <span><span class="badge badge-warn">高い側／低い側</span> 参考との差（検査機関の範囲内を含む）</span>
+    <span><span class="badge badge-bad">確認したい</span> 主治医と共有したい項目</span>
+  </div>
+  <div class="table-wrapper">
+  <table class="score-table">
+    <colgroup><col style="width:17%"><col style="width:9%"><col style="width:10%"><col style="width:13%"><col style="width:11%"><col></colgroup>
+    <thead><tr><th>項目</th><th>2月2日</th><th>9月4日</th><th>栄養学的参考</th><th>位置</th><th>解析のポイント</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="6">ホモシステイン・ビタミンD・鉄</td></tr>
+      <tr><td class="item">ホモシステイン</td><td class="num">—</td><td class="num now">19.9</td><td class="num">6.5〜7.5</td><td class="num"><span class="badge badge-bad">確認したい</span></td><td class="cmt">検査機関 6.3〜18.9（nmol/mL＝µmol/L）も上回る。MTHFRなど特定の型や酵素活性は分からない</td></tr>
+      <tr><td class="item">25-OHビタミンD</td><td class="num">—</td><td class="num now">19.8</td><td class="num">60〜80</td><td class="num"><span class="badge badge-bad">確認したい</span></td><td class="cmt">骨・ミネラル代謝の判定で欠乏の区分（20未満）。2月の値はなく、変化は分からない</td></tr>
+      <tr><td class="item">フェリチン</td><td class="num">—</td><td class="num now">352</td><td class="num">100〜150</td><td class="num"><span class="badge badge-bad">確認したい</span></td><td class="cmt">鉄の蓄えだけでなく炎症・肝臓や代謝の状態にも影響される</td></tr>
+      <tr><td class="item">血清鉄</td><td class="num">127</td><td class="num now">68</td><td class="num">100〜120</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt">検査機関 58〜188 内。鉄を含むサプリメントを始める理由にはしない</td></tr>
+      <tr><td class="item">TIBC／UIBC</td><td class="num">—</td><td class="num now">280／212</td><td class="num">280〜300／180〜200</td><td class="num"><span class="badge badge-good">参考内</span>／<span class="badge badge-warn">高い側</span></td><td class="cmt">UIBCは参考をやや上回る</td></tr>
+      <tr><td class="item">高感度CRP</td><td class="num">—</td><td class="num now">0.018</td><td class="num">—</td><td class="num"><span class="badge badge-good">低い</span></td><td class="cmt">一つの炎症指標が低いことだけで、フェリチンが高い理由は絞れない</td></tr>
+      <tr class="grp"><td colspan="6">血球</td></tr>
+      <tr><td class="item">ヘモグロビン</td><td class="num">14.4</td><td class="num now">14.4</td><td class="num">14〜15</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt">赤血球 503→483、ヘマトクリット 44.7→42.7%。貧血が進んだとはいえない</td></tr>
+      <tr><td class="item">MCV</td><td class="num">88.9</td><td class="num now">88.4</td><td class="num">90〜93</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt">参考より少し小さい側という位置</td></tr>
+      <tr><td class="item">白血球</td><td class="num">6,800</td><td class="num now">5,300</td><td class="num">4,000〜6,000</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt">好中球46.5%・リンパ球43.2%・単球5.6%は検査機関の範囲内。免疫力やストレスの程度は確定できない</td></tr>
+      <tr class="grp"><td colspan="6">糖代謝</td></tr>
+      <tr><td class="item">血糖</td><td class="num">102</td><td class="num now">92</td><td class="num">80〜90</td><td class="num"><span class="badge badge-warn">高い側</span></td><td class="cmt">9月は午前11時30分の採取（診療コメントでは空腹時）</td></tr>
+      <tr><td class="item">HbA1c（NGSP）</td><td class="num">5.6</td><td class="num now">5.6</td><td class="num">5.0〜5.3</td><td class="num"><span class="badge badge-warn">高い側</span></td><td class="cmt">一定期間の血糖状態を反映。血糖とは別の情報</td></tr>
+      <tr><td class="item">1,5-AG</td><td class="num">—</td><td class="num now">24.8</td><td class="num">14〜50</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">インスリン</td><td class="num">—</td><td class="num now">5.7</td><td class="num">—</td><td class="num">—</td><td class="cmt">絶食時間をそろえて比べられるか不明なため、空腹時の参考へ機械的に当てはめない</td></tr>
+      <tr class="grp"><td colspan="6">脂質</td></tr>
+      <tr><td class="item">中性脂肪</td><td class="num">107</td><td class="num now">78</td><td class="num">70〜90</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt">採血時の食事条件に注意</td></tr>
+      <tr><td class="item">HDLコレステロール</td><td class="num">62</td><td class="num now">64</td><td class="num">70〜100</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">LDLコレステロール</td><td class="num">125</td><td class="num now">135</td><td class="num">80〜120</td><td class="num"><span class="badge badge-warn">高い側</span></td><td class="cmt">粒子に含まれるコレステロールの濃度で、食べた油の量や血管の状態を直接測ったものではない</td></tr>
+      <tr><td class="item">総コレステロール</td><td class="num">—</td><td class="num now">208</td><td class="num">180〜220</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">EPA／DHA／AA</td><td class="num">—</td><td class="num now">34.0／91.1／184.2</td><td class="num">—</td><td class="num">—</td><td class="cmt">EPA/AA比 0.18（検査機関 0.06〜0.72 内）。比だけを目標に魚油製品を追加するより、魚の種類と量を振り返る</td></tr>
+      <tr class="grp"><td colspan="6">蛋白質・肝臓・エネルギーに関わる酵素</td></tr>
+      <tr><td class="item">総蛋白</td><td class="num">7.0</td><td class="num now">7.1</td><td class="num">7.2〜7.5</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt">アルブミン濃度 4.2→4.4（検査機関 3.8〜5.3 内）</td></tr>
+      <tr><td class="item">A/G比</td><td class="num">1.5</td><td class="num now">1.6</td><td class="num">1.8〜2.0</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">尿素窒素</td><td class="num">15.5</td><td class="num now">12.4</td><td class="num">15〜17</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt">食事だけでなく肝臓での生成・腎臓からの排泄・水分の状態も関わる</td></tr>
+      <tr><td class="item">AST</td><td class="num">21</td><td class="num now">21</td><td class="num">20〜22</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">ALT</td><td class="num">18</td><td class="num now">26</td><td class="num">20〜22</td><td class="num"><span class="badge badge-warn">高い側</span></td><td class="cmt">施設範囲 4〜43 内</td></tr>
+      <tr><td class="item">LD（IFCC）</td><td class="num">169</td><td class="num now">145</td><td class="num">180〜200</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">ALP（IFCC）</td><td class="num">67</td><td class="num now">64</td><td class="num">62〜64</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">γ-GT</td><td class="num">12</td><td class="num now">13</td><td class="num">20〜30</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt">酵素値の差だけでB群不足や肝臓の合成力低下は診断できない</td></tr>
+      <tr><td class="item">コリンエステラーゼ／アミラーゼ</td><td class="num">—／79</td><td class="num now">284／85</td><td class="num">280〜320／39〜134</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">CK</td><td class="num">198</td><td class="num now">80</td><td class="num">80〜120</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt">2月は当時の検査基準をわずかに上回った。運動や筋肉量の条件が不明なため、回復・減少とは断定しない</td></tr>
+      <tr class="grp"><td colspan="6">腎機能・ミネラル</td></tr>
+      <tr><td class="item">クレアチニン</td><td class="num">0.77</td><td class="num now">0.76</td><td class="num">0.5〜1.0</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">推算GFR</td><td class="num">79.4</td><td class="num now">80.5</td><td class="num">90〜120</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt">差はわずかで、改善とは扱わない。単回の推算値で慢性腎臓病とは決められない</td></tr>
+      <tr><td class="item">尿酸</td><td class="num">5.7</td><td class="num now">5.6</td><td class="num">4.5〜6.5</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">Na／K／Ca</td><td class="num">140／4.4／—</td><td class="num now">140／4.2／8.9</td><td class="num">140〜145／4〜5／8.5〜10</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt">9月のリン 3.2、ホールPTH 30.5 は検査機関の範囲内</td></tr>
+      <tr><td class="item">マグネシウム</td><td class="num">—</td><td class="num now">2.3</td><td class="num">2.4〜2.6</td><td class="num"><span class="badge badge-warn">低い側</span></td><td class="cmt" rowspan="3">いずれも検査機関の範囲内。血清値は体内の全量を表すものではなく、全てを欠乏と認定して補充する理由にはしない</td></tr>
+      <tr><td class="item">亜鉛</td><td class="num">—</td><td class="num now">82</td><td class="num">90〜120</td><td class="num"><span class="badge badge-warn">低い側</span></td></tr>
+      <tr><td class="item">銅</td><td class="num">—</td><td class="num now">72</td><td class="num">80〜120</td><td class="num"><span class="badge badge-warn">低い側</span></td></tr>
+      <tr class="grp"><td colspan="6">甲状腺・ホルモン</td></tr>
+      <tr><td class="item">TSH</td><td class="num">1.58</td><td class="num now">1.59</td><td class="num">0.5〜2.0</td><td class="num"><span class="badge badge-good">参考内</span></td><td class="cmt"></td></tr>
+      <tr><td class="item">FT3／FT4</td><td class="num">—／1.30</td><td class="num now">3.32／1.25</td><td class="num">検査機関の範囲</td><td class="num"><span class="badge badge-good">範囲内</span></td><td class="cmt">測定法による差があるため、検査機関の範囲内であることの確認にとどめる</td></tr>
+      <tr><td class="item">コルチゾール</td><td class="num">—</td><td class="num now">7.9</td><td class="num">—</td><td class="num">—</td><td class="cmt">午前11時30分の一時点。一日のリズムや睡眠障害の原因を示すものではない</td></tr>
+      <tr><td class="item">DHEA-S／遊離テストステロン</td><td class="num">—</td><td class="num now">1206／10.5</td><td class="num">年齢区分の範囲</td><td class="num"><span class="badge badge-good">範囲内</span></td><td class="cmt">一時点のホルモン値を若さや回復力の点数にはしない</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">単位：ホモシステイン nmol/mL、ビタミンD・フェリチン ng/mL、鉄・TIBC・UIBC・亜鉛・銅 μg/dL、血糖・脂質・尿素窒素・尿酸・Ca・Mg mg/dL、ヘモグロビン・総蛋白 g/dL、MCV fL、酵素 U/L、推算GFR mL/min/1.73m²、Na・K mEq/L、TSH μIU/mL、FT3 pg/mL、FT4 ng/dL、コルチゾール μg/dL、DHEA-S ng/mL、遊離テストステロン pg/mL、EPA・DHA・AA μg/mL。「—」は測定なし、または栄養学的参考の記載なし。</p>
+
+  <h3 class="section-subtitle">項目ごとの解説</h3>
+  <p class="note">項目ごとに「仕組み」「今回の読み方」「暮らしのヒント」に分けてまとめています。</p>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">🔄</span><h4>ホモシステインと、葉酸・B12を介する循環</h4></div>
+    <div class="chips"><span class="chip chip-bad">9月 19.9 nmol/mL</span><span class="chip">栄養学的参考 6.5〜7.5</span><span class="chip">検査機関 6.3〜18.9</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>食事から取る必須アミノ酸メチオニンが使われる途中で生じる</li>
+        <li>メチオニンへ戻す反応には葉酸由来の材料とB12、別の経路ではB6が必要</li>
+        <li>「一つを大量に足せば終わる」ではなく、材料の供給と複数の反応がつながった仕組み</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>高くなる背景には、B12や葉酸の状態、腎機能、服薬、食事などが関わる</li>
+        <li>19.9から、MTHFRなどの特定の型や酵素活性は分からない</li>
+        <li>血球が保たれていても、B12・葉酸の状態の代わりにはならない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>B12は魚介・肉・卵、葉酸は葉物野菜・豆類が候補</li>
+        <li>例：食べやすい魚＋柔らかく加熱した青菜＋豆腐の副菜</li>
+        <li>取れていない食品群があれば、替えやすい一品から</li>
+      </ul></div>
+    </div>
+    <div class="topic-point">葉酸やB群を高用量で重ねる判断は、自己補充を先行させず主治医と進めましょう。</div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">☀️</span><h4>ビタミンDと、骨・ミネラル代謝の位置付け</h4></div>
+    <div class="chips"><span class="chip chip-bad">9月 19.8 ng/mL</span><span class="chip">栄養学的参考 60〜80</span><span class="chip">20未満＝欠乏／20〜30未満＝不足／30以上＝充足</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>腸からのカルシウム・リンの吸収と、骨のミネラル代謝を支える</li>
+        <li>食事や皮膚で得たDは肝臓で25-OH型になり、活性化されて働く</li>
+        <li>25-OH値は、供給状態を考える指標</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>骨・ミネラル代謝の判定では欠乏の区分（病名や補充量を決める基準ではない）</li>
+        <li>Ca 8.9・リン 3.2・PTH 30.5は範囲内だが、それで19.8の意味はなくならない</li>
+        <li>この値だけで骨粗鬆症や筋力低下とは診断できない</li>
+        <li>2月は未測定のため、低下したかは分からない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>鮭などの魚や卵を、普段の主菜の候補に</li>
+        <li>取れているなら上乗せせず組合せを保ち、足りなければ食事全体で調整</li>
+      </ul></div>
+    </div>
+    <div class="topic-point">寝つきや体重の悩みをDだけにまとめず、主治医へ確認を。無理な長時間の日光浴や高用量のDで、数値を急いで追い込む必要はありません。</div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">🩸</span><h4>鉄の蓄え、血球と炎症を合わせて見る</h4></div>
+    <div class="chips"><span class="chip chip-bad">フェリチン 352 ng/mL</span><span class="chip chip-warn">血清鉄 127 → 68 μg/dL</span><span class="chip">ヘモグロビン 14.4 → 14.4</span><span class="chip">高感度CRP 0.018</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>血清鉄＝循環している鉄、フェリチン＝貯蔵に関わる蛋白質</li>
+        <li>フェリチンは、炎症・肝臓や代謝の状態にも影響される</li>
+        <li>鉄はヘモグロビンとして酸素を運び、細胞内の電子伝達にも使われる</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>CRPが低いことだけで、フェリチンが高い理由は一つに絞れない</li>
+        <li>血清鉄の低下を、蓄えの減少や吸収不良と同じ意味にしない</li>
+        <li>赤血球・ヘマトクリット・MCVの変化だけで、貧血が進んだとはいえない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>肉・魚介・豆類を、主菜を一種類に絞らず選ぶ</li>
+        <li>魚と野菜の蒸し料理、豆腐の煮物など</li>
+        <li>全て避ける必要も、レバーや赤身肉を大量に増やす必要もない</li>
+      </ul></div>
+    </div>
+    <div class="topic-point">鉄を含むサプリメントを新しく始める理由にはしません。フェリチンの再確認の時期は、現在の診療方針に合わせます。</div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">🍚</span><h4>糖代謝：一時点の血糖と、一定期間の指標を分ける</h4></div>
+    <div class="chips"><span class="chip chip-warn">血糖 102 → 92 mg/dL</span><span class="chip chip-warn">HbA1c 5.6 → 5.6 %</span><span class="chip">1,5-AG 24.8</span><span class="chip">インスリン 5.7（9月 11:30採取）</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>糖質はブドウ糖になり、肝臓や筋肉に蓄えられたり、ATPを作る材料になったりする</li>
+        <li>食後はインスリンが、その利用や貯蔵を調節する</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>血糖はその時の状態、HbA1cは一定期間の状態で、別の情報</li>
+        <li>単回の血糖が下がったことだけを、改善の証拠にしない</li>
+        <li>絶食時間をそろえて比べられるか不明なため、インスリンを空腹時の参考へ機械的に当てはめない</li>
+        <li>甘いものを毎日取ることだけで、血糖変動や依存があるとはならない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>主食を一律に減らすより、主食と菓子・甘い飲み物の関係を見直す</li>
+        <li>朝や夕食に、ご飯と温かい主菜を取りやすい形で用意</li>
+        <li>空腹のまま菓子だけに頼る場面があれば、その組合せを替える</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">🐟</span><h4>脂質と、魚を選ぶ意味</h4></div>
+    <div class="chips"><span class="chip chip-good">中性脂肪 107 → 78</span><span class="chip chip-warn">HDL 62 → 64</span><span class="chip chip-warn">LDL 125 → 135</span><span class="chip">EPA/AA比 0.18</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>脂質はエネルギー源で、細胞膜やホルモンの材料</li>
+        <li>LDL・HDLは粒子に含まれるコレステロールの濃度。食べた油の量や血管の状態を直接測ったものではない</li>
+        <li>魚のEPA・DHAは細胞膜などに組み込まれる</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>中性脂肪が下がった＝全て改善、LDLが上がった＝急に悪化、とまとめない</li>
+        <li>EPA/AA比は検査機関の範囲内（0.06〜0.72）</li>
+        <li>比だけを目標に魚油製品を足すより、実際の魚の種類と量を振り返る</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>肉や揚げ物が続く一食を、魚の蒸し物・焼き物へ</li>
+        <li>晩秋は白菜や大根を添えて</li>
+        <li>魚を食べにくい日は、豆腐や食べやすい肉を</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">🥚</span><h4>蛋白質、肝臓とエネルギーに関わる酵素</h4></div>
+    <div class="chips"><span class="chip chip-warn">総蛋白 7.0 → 7.1</span><span class="chip chip-warn">尿素窒素 15.5 → 12.4</span><span class="chip chip-warn">ALT 18 → 26</span><span class="chip">CK 198 → 80</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>蛋白質はアミノ酸になり、筋肉・血中蛋白・酵素の材料になる</li>
+        <li>尿素窒素は、アミノ酸の窒素を処理した産物</li>
+        <li>B6はアミノ酸代謝、B1やナイアシンはエネルギーを取り出す経路に関わる</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>総蛋白・尿素窒素が低い＝蛋白質不足とは置き換えられない（肝臓・腎臓・水分の状態も関わる）</li>
+        <li>酵素値の差だけで、B群不足や肝臓の合成力低下は診断できない</li>
+        <li>CKの低下を、筋肉の回復や減少と断定しない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>主食だけになる場面があれば、魚・卵・肉・大豆を組み合わせる</li>
+        <li>必要な量が取れている食事に、プロテインは重ねない</li>
+        <li>主菜と野菜を温かい汁物や煮物に（苦手な日は別々でよい）</li>
+        <li>足底の痛みがあれば、身体の実感を優先</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">💧</span><h4>腎機能、ミネラルと血球のバランス</h4></div>
+    <div class="chips"><span class="chip chip-warn">推算GFR 79.4 → 80.5</span><span class="chip chip-warn">Mg 2.3</span><span class="chip chip-warn">亜鉛 82</span><span class="chip chip-warn">銅 72</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>腎臓からの排泄は、老廃物・電解質の濃度、ホモシステインの評価にも関わる</li>
+        <li>MgはATPを使う反応、亜鉛は蛋白質や酵素の機能、銅は鉄の利用やエネルギー代謝に関わる</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>推算GFRの差はわずかで、改善とは扱わない。単回の値で慢性腎臓病とは決められない</li>
+        <li>Mg・亜鉛・銅は検査機関の範囲内。血清値は体内の全量ではない</li>
+        <li>白血球の割合から、免疫力や慢性ストレスの程度は確定できない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>寒くて飲む機会が減るなら、食事や休憩と一緒に飲み物を（大量の水は義務にしない）</li>
+        <li>豆類・魚介・肉・穀類・野菜を組み合わせる</li>
+        <li>亜鉛と銅を、別々の数値目標へ追い込まない</li>
+      </ul></div>
+    </div>
+    <div class="topic-point">補助食品を追加する時も、腎関連の経過と切り離さず、現在の成分と必要性が分かってから考えましょう。</div>
+  </div>
+
+  <div class="topic">
+    <div class="topic-head"><span class="topic-icon">🌙</span><h4>甲状腺や他のホルモンを、寝つきと混同しない</h4></div>
+    <div class="chips"><span class="chip chip-good">TSH 1.58 → 1.59</span><span class="chip">FT3 3.32・FT4 1.25</span><span class="chip">コルチゾール 7.9（11:30）</span></div>
+    <div class="topic-grid">
+      <div class="tcol t-how"><div class="tcol-ttl">仕組み</div><ul>
+        <li>甲状腺ホルモンは、細胞でのエネルギー利用を調節する</li>
+        <li>T4からT3への変換には、セレンを含む酵素などが関わる</li>
+      </ul></div>
+      <div class="tcol t-read"><div class="tcol-ttl">今回の読み方</div><ul>
+        <li>TSH・FT3・FT4は範囲内。変換の障害やセレン不足とは決められない</li>
+        <li>コルチゾールは一時点の値で、一日のリズムや睡眠障害の原因は示さない</li>
+        <li>DHEA-S・遊離テストステロンも範囲内。若さや回復力の点数にはしない</li>
+      </ul></div>
+      <div class="tcol t-life"><div class="tcol-ttl">暮らしのヒント</div><ul>
+        <li>寝つきが悪いなら、その時刻・日中の眠気・服用するものと合わせて考える</li>
+        <li>夜の刺激や支度を減らし、今の休養感を確かめる</li>
+      </ul></div>
+    </div>
+    <div class="topic-point">ホルモンの数字を動かすための食品制限や補助食品へは進めないことが大切です。</div>
+  </div>
+</section>
+
+<!-- 課題 -->
+<section class="section">
+  <h2 class="section-title">現状の課題と改善の方向性</h2>
+  <p>これから始める時には、取り組みの数よりも<strong>順序</strong>が大切です。数値を一斉に理想域へ動かすことを、ご自身一人の宿題にする必要はありません。</p>
+  <div class="priority-cards">
+    <div class="priority-card p1">
+      <div class="priority-head"><div class="no">STEP 1</div><div class="ttl">主治医と、9月の結果の扱いを共有する</div></div>
+      <div class="priority-body">ホモシステイン・D・フェリチンについて、主治医がその後どのような確認や対応を考えているかを共有します。B12・葉酸などの評価や再検の時期、Dの補充の要否は、その方針と現在の使用製品を合わせて具体化します。</div>
+    </div>
+    <div class="priority-card p2">
+      <div class="priority-head"><div class="no">STEP 2</div><div class="ttl">今の食べ方を、少数の場面で把握する</div></div>
+      <div class="priority-body">初回には食事量が多いという自己評価がありましたが、今の実量や朝夕の配分は分かりません。今の一日か二日の食事を思い浮かべ、無理なく替えられる一品や食べる時刻を選ぶ程度からでも始められます。</div>
+    </div>
+    <div class="priority-card p3">
+      <div class="priority-head"><div class="no">STEP 3</div><div class="ttl">休息を、今の体感で確かめる</div></div>
+      <div class="priority-body">寝つきや短めの睡眠が今も続くか、起床時に休めた感じ、日中の眠気も見ます。無理な就寝目標を決める前に一つの支度を早めるなど、夕食の準備を簡単にして夜の余裕を作る、一つの工夫で両方を支える形が現実的です。</div>
+    </div>
+  </div>
+</section>
+
+<!-- 食事 -->
+<section class="section">
+  <h2 class="section-title">輝く毎日のための改善プラン（食事・栄養素）</h2>
+  <div class="highlight">
+    <div class="catch">ご飯・主菜・野菜の副菜をそろえられる候補を、少数持つ</div>
+    <p>栄養素を一つずつ数えなくても食品を組み合わせられます。葉酸とB12、Dや鉄、ミネラルの供給源は重なる部分がありますが、どれか一品で全てを満たすという発想にはしません。必要な量が取れている時は上乗せせず、足りない時に食べやすい範囲で調整します。</p>
+  </div>
+  <div class="food-grid">
+    <div class="food-card f1">
+      <div class="food-head">🍲 一食を温かく選びやすく</div>
+      <ul>
+        <li>鮭と白菜を蒸してご飯に添える</li>
+        <li>豆腐と大根を煮て、食べやすい主菜と組み合わせる</li>
+        <li>魚の日は柔らかい青菜を、別の日は肉や豆類を</li>
+        <li>購入した主菜と温められる副菜を使ってもよい</li>
+      </ul>
+    </div>
+    <div class="food-card f2">
+      <div class="food-head">🍪 菓子は、取る場面を一つ見る</div>
+      <ul>
+        <li>まず量・食べる時刻・食事の代わりになっているかを見る</li>
+        <li>空腹で待てない場面があれば、主食と主菜を取れる時間を先に作る</li>
+        <li>袋から食べ続けず、食べる分を取り分ける</li>
+        <li>楽しみとしての適量は、全てを禁止しなくてよい</li>
+      </ul>
+    </div>
+    <div class="food-card f3">
+      <div class="food-head">🐟 主菜は「追加」と「置き換え」</div>
+      <ul>
+        <li>主菜が取れていない一食には添える</li>
+        <li>必要量がある時は別の主菜へ替える</li>
+        <li>揚げ物が重なる場面があれば、蒸す・煮る・焼く</li>
+        <li>魚が食べづらい日は豆腐・卵・食べやすい肉、野菜は煮物や温めた副菜で</li>
+      </ul>
+    </div>
+    <div class="food-card f4">
+      <div class="food-head">💊 補助食品は、成分と必要性から</div>
+      <ul>
+        <li>使うものがあれば、成分表示・一日の量・始めた時期を医師・薬剤師へ</li>
+        <li>診療でDなどを始めている場合は、別製品を重ねない</li>
+        <li>B群・葉酸・ベタインの自己調整や、血清鉄68から鉄を追加することはしない</li>
+        <li>食事の写真や製品ラベルを一枚残すだけでも相談の準備に</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:12px">味付けや量で胃腸が重いと感じる場合は調整し、健康によいはずだからと無理に食べ続ける必要はありません。これらは新しく試せる献立の候補で、過去の記録通りに食べ直す指示ではありません。</p>
+</section>
+
+<!-- 生活習慣 -->
+<section class="section">
+  <h2 class="section-title">輝く毎日のための改善プラン（生活習慣）</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="t-time">11月上旬</div>
+      <div class="t-icon">🌙</div>
+      <div class="t-body">
+        <h4>今の眠り方を起点にする</h4>
+        <p>3時就寝や寝つきの悪さが続く場合は、いきなり大幅に早く寝ようとせず、就寝までに行うことを一つ早めます（翌日の持ち物や食事の用意を余裕のある時にまとめる）。</p>
+        <p>日中は無理のない範囲で外の明るさに触れ、夜は照明や画面の刺激を穏やかに。コーヒーを飲む場合は、量と時刻、寝つきとの関係を見て調整します。</p>
+      </div>
+      <div class="t-effect">今も不眠が続き、日中の強い眠気や生活上の支障がある場合は、食事だけで改善させようとせず診療で相談を。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="t-time">11月中旬</div>
+      <div class="t-icon">🚶</div>
+      <div class="t-body">
+        <h4>足に合う活動を小さく選ぶ</h4>
+        <p>食後の短い散歩は、体調がよく足に痛みがない時に選べる工夫として引き継げます。寒い朝や暗い夕方が負担なら、明るい時間に近所を短く歩く、室内で立ち上がって姿勢を替えるなど別の方法を。</p>
+      </div>
+      <div class="t-effect">目安は、翌日に痛みや疲れを残さず続けられるか。痛みがある時は医療者へ相談し、我慢して歩く量を増やさない。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="t-time">11月下旬〜<br>12月上旬</div>
+      <div class="t-icon">⚖️</div>
+      <div class="t-body">
+        <h4>体重だけで成果を決めない</h4>
+        <p>初回の174cm・74kgから計算したBMIは約24.4です。筋肉や体調を保って進める視点も大切にし、極端な主食抜きや断食より、一食のおおよその量や菓子の場面を振り返る続けやすい調整を選びます。体重は普段に近い条件で時々見る程度から。</p>
+      </div>
+      <div class="t-effect">食事を用意しやすくなった、支度が短くなった、足を痛めず動けた——そうした変化も次の工夫の材料です。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="t-time">12月上旬</div>
+      <div class="t-icon">📝</div>
+      <div class="t-body">
+        <h4>選んだ工夫を振り返る</h4>
+        <p>主菜を選びやすくなったか、夜の準備を早められたか、相談したいことを伝えられたかを少数の項目で振り返れば十分です。</p>
+      </div>
+      <div class="t-effect">2月と9月の差を今からの行動の成果へさかのぼって結び付けず、始めた時期以降の体感や結果を見ていきます。</div>
+    </div>
+  </div>
+</section>
+
+<!-- 問題点と解決方法 -->
+<section class="section">
+  <h2 class="section-title">現状の問題点と解決方法</h2>
+  <div class="doctor-box">
+    <h4>最初の行動：主治医と共有すること</h4>
+    <ul class="doctor-list">
+      <li>9月のホモシステイン19.9nmol/mL、D19.8ng/mL、フェリチン352ng/mLについて、その後の確認があるか</li>
+      <li>B12・葉酸などの評価、Dの対応、鉄関連の経過確認を、必要性に応じて相談する</li>
+      <li>すでに治療や再検の説明を受けている場合は、その時期と内容を踏まえて食事や製品を調整する</li>
+    </ul>
+  </div>
+  <p>検査値だけから、ご自身で複数の補助食品を一度に始める必要はありません。活動は足の現在の状態に合わせ、痛みのない範囲で選ぶ形です。以前の病歴や一時点のホルモン値から、今の身体を固定的に判断しないようにします。</p>
+
+  <h3 class="section-subtitle">取り組みチェックリスト</h3>
+  <p class="note">できたものをタップすると印が付きます（この端末に保存されます）。全部でなく、続けられそうな一つで十分です。</p>
+  <div class="checklist-grid" id="checklist">
+    <div class="check-item" data-id="c1"><span class="box"></span><span>9月の結果について、主治医とその後の確認・対応を共有した</span></div>
+    <div class="check-item" data-id="c2"><span class="box"></span><span>使っている薬・サプリメントの成分と量を、医師・薬剤師に伝えた</span></div>
+    <div class="check-item" data-id="c3"><span class="box"></span><span>今の一食を一つ選び、主食・主菜・野菜がそろうかを見た</span></div>
+    <div class="check-item" data-id="c4"><span class="box"></span><span>温められる主菜と副菜の候補を持った（購入食も可）</span></div>
+    <div class="check-item" data-id="c5"><span class="box"></span><span>菓子を食べる場面を一つ見て、組合せや取り分け方を替えた</span></div>
+    <div class="check-item" data-id="c6"><span class="box"></span><span>夜の支度を一つ早めた／減らした</span></div>
+    <div class="check-item" data-id="c7"><span class="box"></span><span>起床時の休養感と日中の眠気を振り返った</span></div>
+    <div class="check-item" data-id="c8"><span class="box"></span><span>足に痛みのない範囲で、短く動ける場面を見つけた</span></div>
+  </div>
+
+  <div class="next-tests" id="next">
+    <h4>次回の解析の精度を高めるために、あわせてご提出ください</h4>
+    <ul>
+      <li>今の体重（測れれば腹囲も）</li>
+      <li>今の就寝時刻・睡眠時間と寝つきの様子</li>
+      <li>使っている薬・サプリメントの名前と一日の量</li>
+      <li>数日分の食事の内容と量・食べた時刻</li>
+      <li>採血の日に最後に食事をした時刻（血糖やインスリンを比べやすくなります）</li>
+      <li>iPhoneのヘルスケアの歩数や睡眠の記録（あれば）</li>
+      <li>血液では、ホモシステインの背景を考えるB12・葉酸などの評価を、主治医と相談の上でご検討ください</li>
+    </ul>
+  </div>
+</section>
+
+<!-- おわりに -->
+<section class="section">
+  <h2 class="section-title">おわりに</h2>
+  <p>田村様が、これからの健康づくりを始める前に、今の状態を丁寧に理解したいと考えておられることは、取り組みの方向を選ぶ大切な起点です。今回の検査では、2月と比べられる項目に加え、ホモシステインやD、鉄の蓄えなど、次の確認に役立つ情報が得られました。全ての数字を一度に変えるより、必要な診療の支えを使いながら、食事と休息のうち一つを選んでよい段階です。</p>
+  <p>11月から12月に向かう頃、温めるだけの主菜や柔らかい野菜、夜に減らせる一つの作業が、翌日の過ごしやすさを支えるかもしれません。料理を頑張れない日には購入できるものを使い、外へ出づらい日には室内で姿勢を替えるなど、代わりの方法を持っていて構いません。</p>
+  <p>詳しく知ることと、行動を小さく始めることは両立します。食べやすさ、眠りの実感、動いた後の身体の様子も同じように大切にしてください。診療で方針が具体化したら、その内容と暮らしを合わせ、次に試す一つへつなげていきましょう。</p>
+</section>
+
+<!-- 注意事項 -->
+<section class="section">
+  <h2 class="section-title">解析結果に関する注意事項</h2>
+  <p class="note">本レポートは、提出されたデータをもとにAIによる解析を行い、精密栄養学的観点から健康維持の参考情報として提供するものです。情報の一般性、確実性、正確性、有用性、完全性や健康状態を保証するものではなく、誤記が生じる場合があります。医学的診断、疾病の予防や治療方針の決定を目的としません。健康上の懸念や治療中の疾患、薬・サプリメントの変更については、必要に応じて主治医や薬剤師にご相談ください。</p>
+  <p class="note">AI解析は神宮前統合医療クリニック監修です。</p>
+</section>
+
+</div><!-- /inner -->
+
+<footer class="footer">
+  <img src="https://credo.iwate.jp/CREDO_logo.png" alt="CREDO" onerror="this.outerHTML='<span class=&quot;logo-fallback&quot;>CREDO</span>'">
+  <div><a class="next-checkup-btn" href="#next">次回検査に向けて</a></div>
+  <p>CREDO精密ケア解析レポート ／ 田村 邦宏 様 ／ 2026年11月4日</p>
+  <p>本レポートは、あくまで精密栄養学的観点からの一つの示唆をお伝えするものです。</p>
+</footer>
+</div>
+
+<script>
+(function () {
+  var KEY = 'credo-tamura-20261104-checklist';
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  document.querySelectorAll('#checklist .check-item').forEach(function (el) {
+    var id = el.getAttribute('data-id');
+    if (saved[id]) el.classList.add('done');
+    el.addEventListener('click', function () {
+      el.classList.toggle('done');
+      saved[id] = el.classList.contains('done');
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+    });
+  });
+})();
+</script>
+</body>
+</html>
